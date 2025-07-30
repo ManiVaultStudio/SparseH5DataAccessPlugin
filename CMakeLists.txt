@@ -59,6 +59,8 @@ endif()
 set(SPARSEH5ACCESS_PLUGIN
     src/SparseH5AccessPlugin.h
     src/SparseH5AccessPlugin.cpp
+    src/H5Utils.h
+    src/H5Utils.cpp
 )
 
 set(SPARSEH5ACCESS_SETTINGS
