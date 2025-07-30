@@ -10,7 +10,10 @@
 #include <Dataset.h>
 #include <PointData/PointData.h>
 
+#include "H5Utils.h"
 #include "SettingsAction.h"
+
+#include <QString>
 
 #include <cstdint>
 
@@ -29,6 +32,12 @@ public:
 
     void init() override;
 
+private:
+    // Default: select the first two dimensions of the data
+    void updateFile(const QString& newFilePath);
+
+    void updateVariable(size_t dim, size_t varIndex);
+
 public: // Serialization
 
     Q_INVOKABLE void fromVariantMap(const QVariantMap& variantMap) override;
@@ -38,8 +47,10 @@ private:
     SettingsAction          _settingsAction;    /** General settings */
 
     size_t                  _numPoints;         /** Numer of data points */
-    size_t                  _outDimensions;     /** The number of dimensions */
+    size_t                  _numDims;           /** The number of dimensions */
     mv::Dataset<Points>     _outputPoints;
+
+    SparseMatrixReader      _sparseMatrix;
 };
 
 // =============================================================================

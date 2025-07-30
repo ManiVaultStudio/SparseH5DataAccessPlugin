@@ -22,6 +22,7 @@ public: // Serialization
     void fromVariantMap(const QVariantMap& variantMap) override;
     QVariantMap toVariantMap() const override;
 
+
 protected:
     mv::gui::FilePickerAction      _fileOnDiskAction;           /** File on disk */
     mv::gui::OptionAction          _dataDimOneAction;           /** First dimension */
