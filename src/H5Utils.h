@@ -3,7 +3,12 @@
 #include <string>
 #include <vector>
 
-#include <H5Cpp.h>
+#include <memory>
+
+namespace H5 {
+    class H5File;
+    class DataSet;
+}
 
 /*
 Reads .h5 files creates like this:
@@ -24,30 +29,35 @@ obs_names and var_names are optional fields
 */
 class SparseMatrixReader {
 
+    using H5File_p  = std::unique_ptr<H5::H5File>;
+    using DataSet_p = std::unique_ptr<H5::DataSet>;
+
 public:
-    SparseMatrixReader() {};
+    SparseMatrixReader();
     SparseMatrixReader(const std::string& filename);
 
     ~SparseMatrixReader();
 
     void readFile(const std::string& filename);
-    void closeCurrentFile() const;
     void reset();
 
 public: // Getter
 
     std::vector<float> getRow(int row_idx) const;
 
+    const std::vector<std::string>& getObsNames() const { return _obs_names; }
+    const std::vector<std::string>& getVarNames() const { return _var_names; }
+
     int getNumRows() const { return _num_rows; }
     int getNumCols() const { return _num_cols; }
 
 private:
     std::string _filename               = {};
-
-    H5::H5File _file                    = {};
-    H5::DataSet _indptr_ds              = {};
-    H5::DataSet _indices_ds             = {};
-    H5::DataSet _data_ds                = {};
+    
+    H5File_p _file;
+    DataSet_p _indptr_ds;
+    DataSet_p _indices_ds;
+    DataSet_p _data_ds;
 
     int _num_rows                       = 0;
     int _num_cols                       = 0;

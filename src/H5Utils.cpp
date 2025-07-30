@@ -5,17 +5,25 @@
 #include <array>
 #include <iostream>
 
-SparseMatrixReader::SparseMatrixReader(const std::string& filename) {
+SparseMatrixReader::SparseMatrixReader() :
+    _file(std::make_unique<H5::H5File>()),
+    _indptr_ds(std::make_unique<H5::DataSet>()),
+    _indices_ds(std::make_unique<H5::DataSet>()),
+    _data_ds(std::make_unique<H5::DataSet>())
+{
+}
+
+SparseMatrixReader::SparseMatrixReader(const std::string& filename) : 
+    SparseMatrixReader()
+{
     readFile(filename);
 }
 
-SparseMatrixReader::~SparseMatrixReader() 
-{
-}
+SparseMatrixReader::~SparseMatrixReader() = default;
 
 void SparseMatrixReader::reset()
 {
-    _filename   = {};
+    _filename   = "";
     _file       = {};
     _data_ds    = {};
     _indices_ds = {};
@@ -29,38 +37,42 @@ void SparseMatrixReader::reset()
 
 void SparseMatrixReader::readFile(const std::string& filename)
 {
+    if (_file || _filename.empty()) {
+        reset();
+    }
+
     try {
         _filename = filename;
-        _file = H5::H5File(_filename, H5F_ACC_RDONLY);
+        _file = std::make_unique<H5::H5File>(_filename, H5F_ACC_RDONLY);
 
         // Read shape
-        H5::DataSet shape_ds = _file.openDataSet("/shape");
+        H5::DataSet shape_ds = _file->openDataSet("/shape");
         std::array<int, 2> shape{};
         shape_ds.read(shape.data(), H5::PredType::NATIVE_INT);
         _num_rows = shape[0];
         _num_cols = shape[1];
 
         // Open datasets (but don't read data yet)
-        _data_ds = _file.openDataSet("/data");
-        _indices_ds = _file.openDataSet("/indices");
-        _indptr_ds = _file.openDataSet("/indptr");
+        _data_ds    = std::make_unique<H5::DataSet>(_file->openDataSet("/data"));
+        _indices_ds = std::make_unique<H5::DataSet>(_file->openDataSet("/indices"));
+        _indptr_ds  = std::make_unique<H5::DataSet>(_file->openDataSet("/indptr"));
 
         // Read indptr array (small, need for row access)
-        H5::DataSpace indptr_space = _indptr_ds.getSpace();
+        H5::DataSpace indptr_space = _indptr_ds->getSpace();
         hsize_t indptr_size = {};
         indptr_space.getSimpleExtentDims(&indptr_size);
         _indptr.resize(indptr_size);
-        _indptr_ds.read(_indptr.data(), H5::PredType::NATIVE_INT);
+        _indptr_ds->read(_indptr.data(), H5::PredType::NATIVE_INT);
 
         // Read variable and observation names (if available)
         auto readStringArray = [this](const std::string& datasetName, std::vector<std::string>& dest) -> void {
 
-            if (!_file.nameExists(datasetName)) {
+            if (!_file->nameExists(datasetName)) {
                 dest.clear();
                 return;
             }
 
-            H5::DataSet obs_ds = _file.openDataSet(datasetName);
+            H5::DataSet obs_ds = _file->openDataSet(datasetName);
             H5::DataSpace obs_space = obs_ds.getSpace();
             hsize_t n = {};
             obs_space.getSimpleExtentDims(&n);
@@ -104,6 +116,10 @@ void SparseMatrixReader::readFile(const std::string& filename)
 std::vector<float>SparseMatrixReader::getRow(int row_idx) const {
     std::vector<float> dense_row(_num_cols, 0.0f);
 
+    if (!_data_ds || !_indices_ds) {
+        return dense_row;  // invalid data sets
+    }
+
     const int start   = _indptr[row_idx];
     const int end     = _indptr[row_idx + 1];
     const int row_nnz = end - start;
@@ -118,23 +134,23 @@ std::vector<float>SparseMatrixReader::getRow(int row_idx) const {
         hsize_t count = row_nnz;
 
         // Read data slice
-        H5::DataSpace data_space = _data_ds.getSpace();
+        H5::DataSpace data_space = _data_ds->getSpace();
         data_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
 
         H5::DataSpace mem_space(1, &count);
         std::vector<float> row_data(row_nnz);
-        _data_ds.read(row_data.data(), H5::PredType::NATIVE_FLOAT, mem_space, data_space);
+        _data_ds->read(row_data.data(), H5::PredType::NATIVE_FLOAT, mem_space, data_space);
 
         // Read indices slice
-        H5::DataSpace indices_space = _indices_ds.getSpace();
+        H5::DataSpace indices_space = _indices_ds->getSpace();
         indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
 
         std::vector<int> row_indices(row_nnz);
-        _indices_ds.read(row_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+        _indices_ds->read(row_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
 
         // Populate dense row
 #pragma omp parallel for
-        for (int i = 0; i < row_nnz; ++i) {
+        for (std::int64_t i = 0; i < static_cast<std::int64_t>(row_nnz); ++i) {
             dense_row[row_indices[i]] = row_data[i];
         }
     }
