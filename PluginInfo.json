@@ -1,0 +1,9 @@
+{
+    "name" : "Sparse H5 access",
+    "version" :  {
+        "plugin" : "1.0.0",
+        "core" : ["1.4"]
+    },
+    "type" : "Analysis",
+    "dependencies" : ["Points"]
+}

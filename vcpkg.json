@@ -1,0 +1,15 @@
+{
+  "name": "sparse-h5-access",
+  "version": "1.0.0",
+  "dependencies": [
+    {
+      "name": "hdf5",
+      "features": [ "cpp", "zlib" ] 
+    }
+  ],
+  "builtin-baseline":"dd3097e305afa53f7b4312371f62058d2e665320",
+  "overrides": [
+    { "name": "hdf5", "version": "1.14.6#0" },
+    { "name": "zlib", "version": "1.3.1#0" }
+    ]
+}
