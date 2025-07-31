@@ -27,16 +27,16 @@ def save_h5(data: ad.AnnData, filename: str | Path):
 ```
 obs_names and var_names are optional fields
 */
-class SparseMatrixReader {
+class SparseMatrixCSRReader {
 
     using H5File_p  = std::unique_ptr<H5::H5File>;
     using DataSet_p = std::unique_ptr<H5::DataSet>;
 
 public:
-    SparseMatrixReader();
-    SparseMatrixReader(const std::string& filename);
+    SparseMatrixCSRReader();
+    SparseMatrixCSRReader(const std::string& filename);
 
-    ~SparseMatrixReader();
+    ~SparseMatrixCSRReader();
 
     void readFile(const std::string& filename);
     void reset();

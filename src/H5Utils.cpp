@@ -5,7 +5,7 @@
 #include <array>
 #include <iostream>
 
-SparseMatrixReader::SparseMatrixReader() :
+SparseMatrixCSRReader::SparseMatrixCSRReader() :
     _file(std::make_unique<H5::H5File>()),
     _indptr_ds(std::make_unique<H5::DataSet>()),
     _indices_ds(std::make_unique<H5::DataSet>()),
@@ -13,15 +13,15 @@ SparseMatrixReader::SparseMatrixReader() :
 {
 }
 
-SparseMatrixReader::SparseMatrixReader(const std::string& filename) : 
-    SparseMatrixReader()
+SparseMatrixCSRReader::SparseMatrixCSRReader(const std::string& filename) : 
+    SparseMatrixCSRReader()
 {
     readFile(filename);
 }
 
-SparseMatrixReader::~SparseMatrixReader() = default;
+SparseMatrixCSRReader::~SparseMatrixCSRReader() = default;
 
-void SparseMatrixReader::reset()
+void SparseMatrixCSRReader::reset()
 {
     _filename   = "";
     _file       = {};
@@ -35,7 +35,7 @@ void SparseMatrixReader::reset()
     _var_names  = {};
 }
 
-void SparseMatrixReader::readFile(const std::string& filename)
+void SparseMatrixCSRReader::readFile(const std::string& filename)
 {
     if (_file || _filename.empty()) {
         reset();
@@ -113,7 +113,7 @@ void SparseMatrixReader::readFile(const std::string& filename)
     }
 }
 
-std::vector<float>SparseMatrixReader::getRow(int row_idx) const {
+std::vector<float>SparseMatrixCSRReader::getRow(int row_idx) const {
     std::vector<float> dense_row(_num_cols, 0.0f);
 
     if (!_data_ds || !_indices_ds) {
@@ -161,7 +161,7 @@ std::vector<float>SparseMatrixReader::getRow(int row_idx) const {
     return dense_row;
 }
 
-std::vector<float> SparseMatrixReader::getColumn(int col_idx) const {
+std::vector<float> SparseMatrixCSRReader::getColumn(int col_idx) const {
     std::vector<float> dense_col(_num_rows, 0.0f);
 
     if (!_data_ds || !_indices_ds || col_idx < 0 || col_idx >= _num_cols) {
