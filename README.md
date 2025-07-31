@@ -1,6 +1,6 @@
 # Sparse H5 data access plugin
 
-Analysis plugin for the [ManiVault](https://github.com/ManiVaultStudio/core) which populates a point data selectively from sparse matrices stored on disk using [HDF5](https://github.com/HDFGroup/hdf5/).
+Analysis plugin for [ManiVault](https://github.com/ManiVaultStudio/core) which populates a point data selectively from sparse matrices stored on disk using [HDF5](https://github.com/HDFGroup/hdf5/).
 
 Clone the repo:
 ```
