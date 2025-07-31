@@ -4,8 +4,8 @@ using namespace mv;
 
 SettingsAction::SettingsAction(QObject* parent) :
     gui::GroupAction(parent, "SettingsAction", true),
-    _fileOnDiskAction(this, "H5 on disk"),
-    _numAvailableDimsAction(this, "Variables"),
+    _fileOnDiskAction(this, "H5 file on disk"),
+    _numAvailableDimsAction(this, "Variables", "None loaded yet"),
     _dataDimOneAction(this, "Dim 1", {}, "")
 {
     setText("UMAP Settings");
