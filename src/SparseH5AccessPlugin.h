@@ -34,7 +34,7 @@ public:
 
 private:
     // Default: select the first two dimensions of the data
-    void updateFile(const QString& newFilePath);
+    void updateFile(const QString& filePathQt);
 
     void updateVariable(size_t dim, size_t varIndex);
 
@@ -50,7 +50,9 @@ private:
     size_t                  _numDims;           /** The number of dimensions */
     mv::Dataset<Points>     _outputPoints;
 
-    CSCReader               _sparseMatrix;
+    CSRReader               _csrMatrix;
+    CSCReader               _cscMatrix;
+    SparseMatrixReader*     _sparseMatrix;
 };
 
 // =============================================================================

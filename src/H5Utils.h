@@ -1,14 +1,20 @@
 #pragma once
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
-#include <memory>
+// =============================================================================
+// H5 utilities
+// =============================================================================
 
 namespace H5 {
     class H5File;
     class DataSet;
 }
+
+std::string readAttributeString(H5::H5File& file, const std::string& attr_name);
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -17,27 +23,10 @@ namespace H5 {
 using H5File_p = std::unique_ptr<H5::H5File>;
 using DataSet_p = std::unique_ptr<H5::DataSet>;
 
-// Sparse matrix reader interface
-class SparseMatrixReader {
-
-public:
-    virtual ~SparseMatrixReader() {}
-
-public: // Setup
-
-    virtual void readFile(const std::string& filename) = 0;
-    virtual void reset() = 0;
-
-public: // Getter
-
-    virtual std::vector<float> getRow(int row_idx) const = 0;
-    virtual std::vector<float> getColumn(int col_idx) const = 0;
-
-    virtual const std::vector<std::string>& getObsNames() const = 0;
-    virtual const std::vector<std::string>& getVarNames() const = 0;
-
-    virtual int getNumRows() const = 0;
-    virtual int getNumCols() const = 0;
+enum class SparseMatrixType : std::int32_t {
+    CSR,
+    CSC,
+    UNKNOWN,
 };
 
 struct SparseMatrixData {
@@ -60,6 +49,40 @@ struct SparseMatrixData {
     std::vector<std::string> _var_names = {};
 };
 
+class SparseMatrixReader {
+
+public:
+    SparseMatrixReader(SparseMatrixType type) : _type(type) {}
+    virtual ~SparseMatrixReader() {}
+
+public: // Utility
+    static SparseMatrixType readMatrixType(const std::string& filename);
+
+public: // Setup
+
+    void readFile(const std::string& filename);
+    void reset() { _data.reset(); };
+
+public: // Getter
+
+    virtual std::vector<float> getRow(int row_idx) const = 0;
+    virtual std::vector<float> getColumn(int col_idx) const = 0;
+
+    const std::vector<std::string>& getObsNames() const { return _data._obs_names; }
+    const std::vector<std::string>& getVarNames() const { return _data._var_names; }
+
+    int getNumRows() const { return _data._num_rows; }
+    int getNumCols() const { return _data._num_cols; }
+
+    SparseMatrixType getType() const { return _type; }
+
+protected:
+    SparseMatrixData    _data = {};
+    SparseMatrixType    _type = SparseMatrixType::UNKNOWN;
+};
+
+bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data);
+
 // =============================================================================
 // CSRReader
 // =============================================================================
@@ -71,6 +94,7 @@ def save_h5(data: ad.AnnData, filename: str | Path):
     data_csr = data.X.to_memory()
     data_string_dt = h5py.string_dtype(encoding='utf-8')
     with h5py.File(filename, 'w') as f:
+        f.attrs['format'] = 'CSR'
         f.create_dataset('data', data=data_csr.data)
         f.create_dataset('indices', data=data_csr.indices)
         f.create_dataset('indptr', data=data_csr.indptr)
@@ -81,7 +105,7 @@ def save_h5(data: ad.AnnData, filename: str | Path):
 ```
 obs_names and var_names are optional fields
 */
-class CSRReader : public SparseMatrixReader 
+class CSRReader : public SparseMatrixReader
 {
 
 public:
@@ -90,25 +114,10 @@ public:
 
     ~CSRReader();
 
-public: // Setup
-
-    void readFile(const std::string& filename) override;
-    void reset() override;
-
 public: // Getter
 
     std::vector<float> getRow(int row_idx) const override;
     std::vector<float> getColumn(int col_idx) const override;
-
-    const std::vector<std::string>& getObsNames() const override { return _data._obs_names; }
-    const std::vector<std::string>& getVarNames() const override { return _data._var_names; }
-
-    int getNumRows() const override { return _data._num_rows; }
-    int getNumCols() const override { return _data._num_cols; }
-
-private:
-    SparseMatrixData    _data = {};
-
 };
 
 // =============================================================================
@@ -125,6 +134,7 @@ def save_h5(data: ad.AnnData, filename: str | Path):
     del data_csr
     data_string_dt = h5py.string_dtype(encoding='utf-8')
     with h5py.File(filename, 'w') as f:
+        f.attrs['format'] = 'CSC'
         f.create_dataset('data', data=data_csc.data)
         f.create_dataset('indices', data=data_csc.indices)
         f.create_dataset('indptr', data=data_csc.indptr)
@@ -137,8 +147,6 @@ obs_names and var_names are optional fields
 */
 class CSCReader : public SparseMatrixReader
 {
-    using H5File_p = std::unique_ptr<H5::H5File>;
-    using DataSet_p = std::unique_ptr<H5::DataSet>;
 
 public:
     CSCReader();
@@ -146,23 +154,8 @@ public:
 
     ~CSCReader();
 
-public: // Setup
-
-    void readFile(const std::string& filename) override;
-    void reset() override;
-
 public: // Getter
 
     std::vector<float> getRow(int row_idx) const override;
     std::vector<float> getColumn(int col_idx) const override;
-
-    const std::vector<std::string>& getObsNames() const override { return _data._obs_names; }
-    const std::vector<std::string>& getVarNames() const override { return _data._var_names; }
-
-    int getNumRows() const override { return _data._num_rows; }
-    int getNumCols() const override { return _data._num_cols; }
-
-private:
-    SparseMatrixData    _data = {};
-
 };

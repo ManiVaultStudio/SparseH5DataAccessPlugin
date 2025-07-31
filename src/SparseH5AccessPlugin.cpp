@@ -18,7 +18,9 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     _numPoints(),
     _numDims(1),
     _outputPoints(),
-    _sparseMatrix()
+    _csrMatrix(),
+    _cscMatrix(),
+    _sparseMatrix(&_cscMatrix)
 {
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
     connect(&_settingsAction.getDataDimOneAction(), &gui::OptionAction::currentIndexChanged, this, [this](const int32_t varIndex) { updateVariable(0, varIndex); });
@@ -70,11 +72,29 @@ static QStringList toQStringList(const std::vector<std::string>& str_vec) {
     return str_list;
 }
 
-void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
+void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 {
-    _sparseMatrix.readFile(newFilePath.toStdString());
+    _csrMatrix.reset();
+    _cscMatrix.reset();
 
-    const auto varNames = toQStringList(_sparseMatrix.getVarNames());
+    const std::string filePath  = filePathQt.toStdString();
+    const SparseMatrixType type = SparseMatrixReader::readMatrixType(filePath);
+    
+    switch (type)
+    {
+    case SparseMatrixType::CSR:
+        _sparseMatrix = &_csrMatrix;
+        break;
+    case SparseMatrixType::CSC:
+        _sparseMatrix = &_cscMatrix;
+        break;
+    default:
+        _sparseMatrix = &_csrMatrix;
+    }
+
+    _sparseMatrix->readFile(filePath);
+
+    const auto varNames = toQStringList(_sparseMatrix->getVarNames());
 
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
@@ -92,7 +112,7 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     const auto varIndex_1 = _settingsAction.getDataDimOneAction().getCurrentIndex();
 
-    auto sparseVals_1 = _sparseMatrix.getColumn(varIndex_1);
+    auto sparseVals_1 = _sparseMatrix->getColumn(varIndex_1);
 
     assert(sparseVals_1.size() == _numPoints);
 
@@ -101,7 +121,7 @@ void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     events().notifyDatasetDataChanged(_outputPoints);
 
     // update dimension names
-    const std::vector<std::string>& varNames = _sparseMatrix.getVarNames();
+    const std::vector<std::string>& varNames = _sparseMatrix->getVarNames();
 
     _outputPoints->setDimensionNames({ QString::fromStdString(varNames[varIndex_1]) });
 }

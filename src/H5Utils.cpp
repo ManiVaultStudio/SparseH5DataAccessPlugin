@@ -6,36 +6,34 @@
 #include <filesystem>
 #include <iostream>
 #include <malloc.h>
+#include <memory>
+#include <string>
 
 // =============================================================================
-// Common utilities
+// H5 utilities
 // =============================================================================
 
-SparseMatrixData::SparseMatrixData() :
-    _file(std::make_unique<H5::H5File>()),
-    _indptr_ds(std::make_unique<H5::DataSet>()),
-    _indices_ds(std::make_unique<H5::DataSet>()),
-    _data_ds(std::make_unique<H5::DataSet>())
-{
+std::string readAttributeString(H5::H5File& file, const std::string& attr_name) {
+    std::string value = "";
+
+    try {
+        const H5::Attribute attr   = file.openAttribute(attr_name);
+        const H5::StrType str_type = attr.getStrType();
+                
+        attr.read(str_type, value);
+    }
+    catch (const H5::Exception& e) {
+        std::cerr << "Error reading attribute '" << attr_name << "': " << e.getDetailMsg() << std::endl;
+    }
+
+    return value;
 }
 
-SparseMatrixData::~SparseMatrixData() = default;
+// =============================================================================
+// Sparse matrix common utilities
+// =============================================================================
 
-void SparseMatrixData::reset()
-{
-    _filename   = "";
-    _file       = {};
-    _data_ds    = {};
-    _indices_ds = {};
-    _indptr_ds  = {};
-    _num_rows   = 0;
-    _num_cols   = 0;
-    _indptr     = {};
-    _obs_names  = {};
-    _var_names  = {};
-}
-
-static bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
+bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 {
     if (!std::filesystem::exists(filename)) {
         return false;
@@ -53,9 +51,9 @@ static bool readMatrixFromFile(const std::string& filename, SparseMatrixData& da
         data._num_cols = shape[1];
 
         // Open datasets (but don't read data yet)
-        data._data_ds    = std::make_unique<H5::DataSet>(data._file->openDataSet("/data"));
+        data._data_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/data"));
         data._indices_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indices"));
-        data._indptr_ds  = std::make_unique<H5::DataSet>(data._file->openDataSet("/indptr"));
+        data._indptr_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indptr"));
 
         // Read indptr array (small, need for row access)
         H5::DataSpace indptr_space = data._indptr_ds->getSpace();
@@ -120,6 +118,54 @@ static bool readMatrixFromFile(const std::string& filename, SparseMatrixData& da
     return true;
 }
 
+SparseMatrixData::SparseMatrixData() :
+    _file(std::make_unique<H5::H5File>()),
+    _indptr_ds(std::make_unique<H5::DataSet>()),
+    _indices_ds(std::make_unique<H5::DataSet>()),
+    _data_ds(std::make_unique<H5::DataSet>())
+{
+}
+
+SparseMatrixData::~SparseMatrixData() = default;
+
+void SparseMatrixData::reset()
+{
+    _filename   = "";
+    _file       = {};
+    _data_ds    = {};
+    _indices_ds = {};
+    _indptr_ds  = {};
+    _num_rows   = 0;
+    _num_cols   = 0;
+    _indptr     = {};
+    _obs_names  = {};
+    _var_names  = {};
+}
+
+SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename) {
+    H5::H5File file = H5::H5File(filename, H5F_ACC_RDONLY);
+    std::string format = readAttributeString(file, "format");
+
+    if (format == "CSR")
+        return SparseMatrixType::CSR;
+
+    if (format == "CSC")
+        return SparseMatrixType::CSC;
+
+    std::cerr << "File does not contain attribute format or contains unknown sparse matrix format" << std::endl;
+
+    return SparseMatrixType::UNKNOWN;
+}
+
+void SparseMatrixReader::readFile(const std::string& filename)
+{
+    if (_data._file || !_data._filename.empty()) {
+        reset();
+    }
+
+    readMatrixFromFile(filename, _data);
+}
+
 static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
     std::vector<float> dense_array(size_second, 0.0f);
 
@@ -178,8 +224,8 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
     try {
         // We need to scan through all arrays to find entries in the requested column
         for (int arr = 0; arr < size_primary; ++arr) {
-            const int start   = data._indptr[arr];
-            const int end     = data._indptr[arr + 1];
+            const int start = data._indptr[arr];
+            const int end = data._indptr[arr + 1];
             const int arr_nnz = end - start;
 
             if (arr_nnz == 0) {
@@ -229,7 +275,8 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
 // CSRReader
 // =============================================================================
 
-CSRReader::CSRReader()
+CSRReader::CSRReader() :
+    SparseMatrixReader(SparseMatrixType::CSR)
 {
 }
 
@@ -240,20 +287,6 @@ CSRReader::CSRReader(const std::string& filename) :
 }
 
 CSRReader::~CSRReader() = default;
-
-void CSRReader::reset()
-{
-    _data.reset();
-}
-
-void CSRReader::readFile(const std::string& filename)
-{
-    if (_data._file || !_data._filename.empty()) {
-        reset();
-    }
-
-    readMatrixFromFile(filename, _data);
-}
 
 std::vector<float>CSRReader::getRow(int row_idx) const 
 {
@@ -269,7 +302,8 @@ std::vector<float> CSRReader::getColumn(int col_idx) const
 // CSCReader
 // =============================================================================
 
-CSCReader::CSCReader() 
+CSCReader::CSCReader() :
+    SparseMatrixReader(SparseMatrixType::CSC)
 {
 }
 
@@ -280,20 +314,6 @@ CSCReader::CSCReader(const std::string& filename) :
 }
 
 CSCReader::~CSCReader() = default;
-
-void CSCReader::reset()
-{
-    _data.reset();
-}
-
-void CSCReader::readFile(const std::string& filename) 
-{
-    if (_data._file || !_data._filename.empty()) {
-        reset();
-    }
-
-    readMatrixFromFile(filename, _data);
-}
 
 std::vector<float> CSCReader::getColumn(int col_idx) const 
 {
