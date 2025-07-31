@@ -44,6 +44,7 @@ public:
 public: // Getter
 
     std::vector<float> getRow(int row_idx) const;
+    std::vector<float> getColumn(int col_idx) const;
 
     const std::vector<std::string>& getObsNames() const { return _obs_names; }
     const std::vector<std::string>& getVarNames() const { return _var_names; }

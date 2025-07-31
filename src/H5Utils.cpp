@@ -160,3 +160,60 @@ std::vector<float>SparseMatrixReader::getRow(int row_idx) const {
 
     return dense_row;
 }
+
+std::vector<float> SparseMatrixReader::getColumn(int col_idx) const {
+    std::vector<float> dense_col(_num_rows, 0.0f);
+
+    if (!_data_ds || !_indices_ds || col_idx < 0 || col_idx >= _num_cols) {
+        return dense_col;  // invalid datasets or column index
+    }
+
+    try {
+        // We need to scan through all rows to find entries in the requested column
+        for (int row = 0; row < _num_rows; ++row) {
+            const int start = _indptr[row];
+            const int end = _indptr[row + 1];
+            const int row_nnz = end - start;
+
+            if (row_nnz == 0) {
+                continue;  // Empty row, skip
+            }
+
+            // Define hyperslab parameters for this row
+            hsize_t offset = start;
+            hsize_t count = row_nnz;
+
+            // Read indices slice for this row
+            H5::DataSpace indices_space = _indices_ds->getSpace();
+            indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
+
+            H5::DataSpace mem_space(1, &count);
+            std::vector<int> row_indices(row_nnz);
+            _indices_ds->read(row_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+
+            // Check if this row has an entry at the requested column
+            for (int i = 0; i < row_nnz; ++i) {
+                if (row_indices[i] == col_idx) {
+                    // Found the column! Now read the corresponding data value
+                    hsize_t data_offset = start + i;
+                    hsize_t data_count = 1;
+
+                    H5::DataSpace data_space = _data_ds->getSpace();
+                    data_space.selectHyperslab(H5S_SELECT_SET, &data_count, &data_offset);
+
+                    H5::DataSpace scalar_space(1, &data_count);
+                    float value;
+                    _data_ds->read(&value, H5::PredType::NATIVE_FLOAT, scalar_space, data_space);
+
+                    dense_col[row] = value;
+                    break;  // Found the entry for this row, move to next row
+                }
+            }
+        }
+    }
+    catch (const H5::Exception& e) {
+        std::cerr << "Error reading column " << col_idx << ": " << e.getDetailMsg() << std::endl;
+    }
+
+    return dense_col;
+}

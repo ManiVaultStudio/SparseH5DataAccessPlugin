@@ -92,19 +92,12 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     const auto varIndex_1 = _settingsAction.getDataDimOneAction().getCurrentIndex();
 
-    const auto sparseVals_1 = _sparseMatrix.getRow(varIndex_1);
+    const auto sparseVals_1 = _sparseMatrix.getColumn(varIndex_1);
 
     assert(sparseVals_1.size() == _numPoints);
 
-    std::vector<float>  sparseVals_combined(sparseVals_1.size());
-
-#pragma omp parallel for
-    for (std::int64_t i = 0; i < static_cast<std::int64_t>(sparseVals_1.size()); ++i) {
-        sparseVals_combined[2 * i] = sparseVals_1[i];
-    }
-
     // update data
-    _outputPoints->setData(std::move(sparseVals_combined), _numDims);
+    _outputPoints->setData(std::move(sparseVals_1), _numDims);
     events().notifyDatasetDataChanged(_outputPoints);
 
     // update dimension names
