@@ -16,13 +16,12 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
     _settingsAction(this),
     _numPoints(),
-    _numDims(2),
+    _numDims(1),
     _outputPoints(),
     _sparseMatrix()
 {
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
     connect(&_settingsAction.getDataDimOneAction(), &gui::OptionAction::currentIndexChanged, this, [this](const int32_t varIndex) { updateVariable(0, varIndex); });
-    connect(&_settingsAction.getDataDimTwoAction(), &gui::OptionAction::currentIndexChanged, this, [this](const int32_t varIndex) { updateVariable(1, varIndex); });
 }
 
 SparseH5AccessPlugin::~SparseH5AccessPlugin()
@@ -77,39 +76,31 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 
     auto varNames = toQStringList(_sparseMatrix.getVarNames());
 
-    _settingsAction.getDataDimOneAction().setOptions(varNames);
-    _settingsAction.getDataDimTwoAction().setOptions(varNames);
+    _settingsAction.getNumAvailableDimsAction().setText(QString::number(varNames.size()));
 
     _settingsAction.getDataDimOneAction().blockSignals(true);
-    _settingsAction.getDataDimTwoAction().blockSignals(true);
 
+    _settingsAction.getDataDimOneAction().setOptions(varNames);
     _settingsAction.getDataDimOneAction().setCurrentIndex(0);
-    _settingsAction.getDataDimTwoAction().setCurrentIndex(1);
 
     _settingsAction.getDataDimOneAction().blockSignals(false);
-    _settingsAction.getDataDimTwoAction().blockSignals(false);
+
+    updateVariable(0, 0);
 }
 
 // TODO: handle this update differently for variable number of dimensions
 void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     const auto varIndex_1 = _settingsAction.getDataDimOneAction().getCurrentIndex();
-    const auto varIndex_2 = _settingsAction.getDataDimTwoAction().getCurrentIndex();
 
     const auto sparseVals_1 = _sparseMatrix.getRow(varIndex_1);
-    const auto sparseVals_2 = _sparseMatrix.getRow(varIndex_2);
 
-    assert(sparseVals_1.size() == sparseVals_2.size());
     assert(sparseVals_1.size() == _numPoints);
 
-    const size_t single_size = sparseVals_1.size();
-    const size_t total_size = single_size * 2;
-
-    std::vector<float>  sparseVals_combined(total_size);
+    std::vector<float>  sparseVals_combined(sparseVals_1.size());
 
 #pragma omp parallel for
-    for (std::int64_t i = 0; i < static_cast<std::int64_t>(single_size); ++i) {
-        sparseVals_combined[2 * i]     = sparseVals_1[i];
-        sparseVals_combined[2 * i + 1] = sparseVals_2[i];
+    for (std::int64_t i = 0; i < static_cast<std::int64_t>(sparseVals_1.size()); ++i) {
+        sparseVals_combined[2 * i] = sparseVals_1[i];
     }
 
     // update data
@@ -119,12 +110,7 @@ void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     // update dimension names
     const std::vector<std::string>& varNames = _sparseMatrix.getVarNames();
 
-    std::vector<QString> dimNames = { 
-        QString::fromStdString(varNames[varIndex_1]), 
-        QString::fromStdString(varNames[varIndex_2])
-    };
-
-    _outputPoints->setDimensionNames(dimNames);
+    _outputPoints->setDimensionNames({ QString::fromStdString(varNames[varIndex_1]) });
 }
 
 void SparseH5AccessPlugin::fromVariantMap(const QVariantMap& variantMap)
