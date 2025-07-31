@@ -17,6 +17,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _numAvailableDimsAction.setToolTip("Number of variables/dimensions/channels in the data");
     _dataDimOneAction.setToolTip("Data dimension 1");
 
+    _matrixTypeAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
     _numAvailableDimsAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
 
     _dataDimOneAction.setDefaultWidgetFlag(gui::OptionAction::WidgetFlag::LineEdit);
