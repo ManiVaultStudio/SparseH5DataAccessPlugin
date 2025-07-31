@@ -79,6 +79,7 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     const std::string filePath  = filePathQt.toStdString();
     const SparseMatrixType type = SparseMatrixReader::readMatrixType(filePath);
+    const std::string typeStr   = sparseMatrixTypeToString(type);
     
     switch (type)
     {
@@ -96,6 +97,7 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     const auto varNames = toQStringList(_sparseMatrix->getVarNames());
 
+    _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
     _settingsAction.getDataDimOneAction().blockSignals(true);

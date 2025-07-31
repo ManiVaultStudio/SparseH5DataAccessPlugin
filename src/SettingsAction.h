@@ -15,6 +15,7 @@ public:
 public: // Action getters
 
     mv::gui::FilePickerAction& getFileOnDiskAction() { return _fileOnDiskAction; }
+    mv::gui::StringAction& getMatrixTypeAction() { return _matrixTypeAction; }
     mv::gui::StringAction& getNumAvailableDimsAction() { return _numAvailableDimsAction; }
     mv::gui::OptionAction& getDataDimOneAction() { return _dataDimOneAction; }
 
@@ -25,6 +26,7 @@ public: // Serialization
 
 protected:
     mv::gui::FilePickerAction      _fileOnDiskAction;           /** File on disk */
+    mv::gui::StringAction          _matrixTypeAction;           /** Type of sparse matrix */
     mv::gui::StringAction          _numAvailableDimsAction;     /** Shows number of available dimension */
     mv::gui::OptionAction          _dataDimOneAction;           /** First dimension */
 };
