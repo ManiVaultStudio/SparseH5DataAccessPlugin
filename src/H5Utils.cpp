@@ -33,6 +33,39 @@ std::string readAttributeString(H5::H5File& file, const std::string& attr_name) 
 // Sparse matrix common utilities
 // =============================================================================
 
+std::string sparseMatrixTypeToString(const SparseMatrixType& type)
+{
+    std::string typeStr = "";
+
+    switch (type)
+    {
+    case SparseMatrixType::CSR:
+        typeStr = "CSR";
+        break;
+    case SparseMatrixType::CSC:
+        typeStr = "CSC";
+        break;
+    case SparseMatrixType::UNKNOWN:
+        typeStr = "UNKNOWN";
+        break;
+    }
+
+    return typeStr;
+}
+
+SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
+{
+    SparseMatrixType type = SparseMatrixType::UNKNOWN;
+
+    if (typeStr == "CSR")
+        type = SparseMatrixType::CSR;
+
+    if (typeStr == "CSC")
+        type = SparseMatrixType::CSC;
+
+    return type;
+}
+
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 {
     if (!std::filesystem::exists(filename)) {
@@ -146,15 +179,7 @@ SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename)
     H5::H5File file = H5::H5File(filename, H5F_ACC_RDONLY);
     std::string format = readAttributeString(file, "format");
 
-    if (format == "CSR")
-        return SparseMatrixType::CSR;
-
-    if (format == "CSC")
-        return SparseMatrixType::CSC;
-
-    std::cerr << "File does not contain attribute format or contains unknown sparse matrix format" << std::endl;
-
-    return SparseMatrixType::UNKNOWN;
+    return sparseMatrixStringToType(format);
 }
 
 void SparseMatrixReader::readFile(const std::string& filename)

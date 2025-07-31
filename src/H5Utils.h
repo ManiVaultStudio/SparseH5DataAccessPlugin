@@ -29,6 +29,9 @@ enum class SparseMatrixType : std::int32_t {
     UNKNOWN,
 };
 
+std::string sparseMatrixTypeToString(const SparseMatrixType& type);
+SparseMatrixType sparseMatrixStringToType(const std::string& type);
+
 struct SparseMatrixData {
     SparseMatrixData();
     ~SparseMatrixData();
@@ -75,6 +78,7 @@ public: // Getter
     int getNumCols() const { return _data._num_cols; }
 
     SparseMatrixType getType() const { return _type; }
+    std::string getTypeString() const { return sparseMatrixTypeToString(_type); }
 
 protected:
     SparseMatrixData    _data = {};
