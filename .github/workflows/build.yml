@@ -144,28 +144,6 @@ jobs:
             setapikey "${{ secrets.GH_VCPKG_PACKAGES }}" \
             -Source "${{ env.FEED_URL }}"
 
-      # Install vcpkg dependencies
-      - name: Install vcpkg dependencies 
-        if: startsWith(matrix.os, 'windows')
-        shell: pwsh
-        run:  |
-          cd ${{ github.workspace }}
-          ${{ env.VCPKG_EXE }} install --triplet x64-windows
-
-      - name: Install vcpkg dependencies 
-        if: startsWith(matrix.os, 'ubuntu')
-        shell: bash
-        run:  |
-          cd ${{ github.workspace }}
-          ${{ env.VCPKG_EXE }} install --triplet x64-linux-dynamic
-
-      - name: Install vcpkg dependencies 
-        if: startsWith(matrix.os, 'macos')
-        shell: bash
-        run:  |
-          cd ${{ github.workspace }}
-          ${{ env.VCPKG_EXE }} install --triplet x64-osx-dynamic
-
       # Build the package
       - name: Windows build
         if: startsWith(matrix.os, 'windows')
