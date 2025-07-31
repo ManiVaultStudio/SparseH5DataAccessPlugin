@@ -76,7 +76,7 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 
     auto varNames = toQStringList(_sparseMatrix.getVarNames());
 
-    _settingsAction.getNumAvailableDimsAction().setText(QString::number(varNames.size()));
+    _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
     _settingsAction.getDataDimOneAction().blockSignals(true);
 
