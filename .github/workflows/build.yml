@@ -89,7 +89,7 @@ jobs:
           ${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat
           echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "VCPKG_EXE=${{ github.workspace }}\vcpkg\vcpkg.exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "VCPKG_LIBRARY_LINKAGE=dynamic" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "VCPKG_LIBRARY_LINKAGE=static" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Bootstrap vcpkg
         if: startsWith(matrix.os, 'ubuntu') || startsWith(matrix.os, 'macos')
@@ -98,7 +98,7 @@ jobs:
           ${{ github.workspace }}/vcpkg/bootstrap-vcpkg.sh 
           echo "VCPKG_ROOT=${{ github.workspace }}/vcpkg" >> $GITHUB_ENV
           echo "VCPKG_EXE=${{ github.workspace }}/vcpkg/vcpkg" >> $GITHUB_ENV
-          echo "VCPKG_LIBRARY_LINKAGE=dynamic" >> $GITHUB_ENV
+          echo "VCPKG_LIBRARY_LINKAGE=static" >> $GITHUB_ENV
 
       - name: NuGet dependencies (Linux)
         if: startsWith(matrix.os, 'ubuntu')
