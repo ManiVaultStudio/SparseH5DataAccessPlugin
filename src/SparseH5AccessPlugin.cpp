@@ -74,7 +74,7 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 {
     _sparseMatrix.readFile(newFilePath.toStdString());
 
-    auto varNames = toQStringList(_sparseMatrix.getVarNames());
+    const auto varNames = toQStringList(_sparseMatrix.getVarNames());
 
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
@@ -92,7 +92,7 @@ void SparseH5AccessPlugin::updateFile(const QString& newFilePath)
 void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     const auto varIndex_1 = _settingsAction.getDataDimOneAction().getCurrentIndex();
 
-    const auto sparseVals_1 = _sparseMatrix.getColumn(varIndex_1);
+    auto sparseVals_1 = _sparseMatrix.getColumn(varIndex_1);
 
     assert(sparseVals_1.size() == _numPoints);
 

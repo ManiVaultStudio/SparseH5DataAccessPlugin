@@ -50,7 +50,7 @@ private:
     size_t                  _numDims;           /** The number of dimensions */
     mv::Dataset<Points>     _outputPoints;
 
-    SparseMatrixCSRReader   _sparseMatrix;
+    CSCReader               _sparseMatrix;
 };
 
 // =============================================================================
