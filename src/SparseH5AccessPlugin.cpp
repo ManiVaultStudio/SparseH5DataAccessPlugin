@@ -112,20 +112,25 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
 // TODO: handle this update differently for variable number of dimensions
 void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
-    const auto varIndex_1 = _settingsAction.getDataDimOneAction().getCurrentIndex();
+    auto varInd = _settingsAction.getDataDimOneAction().getCurrentIndex();
 
-    auto sparseVals_1 = _sparseMatrix->getColumn(varIndex_1);
+    if (varInd < 0) {
+        varInd = 0;
+        qDebug() << "SparseH5AccessPlugin::updateVariable: unexpected behaviour -> varIndex < 0 : " << varInd;
+    }
 
-    assert(sparseVals_1.size() == _numPoints);
+    auto sparseVals = _sparseMatrix->getColumn(varInd);
+
+    assert(sparseVals.size() == _numPoints);
 
     // update data
-    _outputPoints->setData(std::move(sparseVals_1), _numDims);
+    _outputPoints->setData(std::move(sparseVals), _numDims);
     events().notifyDatasetDataChanged(_outputPoints);
 
     // update dimension names
     const std::vector<std::string>& varNames = _sparseMatrix->getVarNames();
 
-    _outputPoints->setDimensionNames({ QString::fromStdString(varNames[varIndex_1]) });
+    _outputPoints->setDimensionNames({ QString::fromStdString(varNames[varInd]) });
 }
 
 void SparseH5AccessPlugin::fromVariantMap(const QVariantMap& variantMap)
