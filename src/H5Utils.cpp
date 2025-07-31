@@ -5,9 +5,9 @@
 #include <array>
 #include <filesystem>
 #include <iostream>
-#include <malloc.h>
 #include <memory>
 #include <string>
+#include <stdlib.h> // free
 
 // =============================================================================
 // H5 utilities
