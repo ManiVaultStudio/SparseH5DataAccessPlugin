@@ -1,5 +1,6 @@
 #include "SparseH5AccessPlugin.h"
 
+#include <Project.h>
 #include <util/Icon.h>
 
 #include <PointData/InfoAction.h>
@@ -7,10 +8,12 @@
 #include <QDebug>
 
 #include <cassert>
+#include <filesystem>
 
 Q_PLUGIN_METADATA(IID "studio.manivault.SparseH5AccessPlugin")
 
 using namespace mv;
+namespace fs = std::filesystem;
 
 SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
@@ -140,6 +143,11 @@ void SparseH5AccessPlugin::fromVariantMap(const QVariantMap& variantMap)
     mv::util::variantMapMustContain(variantMap, "Settings");
 
     _settingsAction.fromParentVariantMap(variantMap);
+
+    if (_settingsAction.getSaveDataToProjectChecked()) {
+        loadFileFromProject(variantMap);
+    }
+
 }
 
 QVariantMap SparseH5AccessPlugin::toVariantMap() const
@@ -148,9 +156,54 @@ QVariantMap SparseH5AccessPlugin::toVariantMap() const
 
     _settingsAction.insertIntoVariantMap(variantMap);
 
+    if (_settingsAction.getSaveDataToProjectChecked()) {
+        saveFileToProject(variantMap);
+    }
+
     return variantMap;
 }
- 
+
+bool SparseH5AccessPlugin::saveFileToProject(QVariantMap& variantMap) const
+{
+    const fs::path fileOnDiskPath = _settingsAction.getFileOnDiskPath().toStdString();
+
+    if (fileOnDiskPath.empty()) {
+        return false;
+    }
+
+    const fs::path mvSaveDir            = mv::projects().getTemporaryDirPath(mv::AbstractProjectManager::TemporaryDirType::Save).toStdString();
+    const fs::path fileOnDiskName       = fileOnDiskPath.filename();
+    const fs::path savePath             = mvSaveDir / fileOnDiskName;
+
+    const bool success = fs::copy_file(fileOnDiskPath, savePath, fs::copy_options::overwrite_existing);
+
+    if (success) {
+        variantMap["FileOnDiskName"]    = QVariant::fromValue(fileOnDiskName.string());
+    }
+
+    return success;
+}
+
+bool SparseH5AccessPlugin::loadFileFromProject(const QVariantMap& variantMap)
+{
+    const fs::path fileOnDiskName   = variantMap.value("FileOnDiskName", QVariant::fromValue(std::string(""))).toString().toStdString();
+
+    if (fileOnDiskName.empty()) {
+        return false;
+    }
+
+    const fs::path projectPath  = mv::projects().getCurrentProject()->getFilePath().toStdString();
+    const fs::path loadPath     = projectPath / fileOnDiskName;
+
+    if (!fs::exists(loadPath)) {
+        return false;
+    }
+
+    _settingsAction.getFileOnDiskAction().setFilePath(QString::fromStdString(loadPath.string()));
+
+    return true;
+}
+
 // =============================================================================
 // Factory
 // =============================================================================
@@ -158,7 +211,6 @@ SparseH5AccessPluginFactory::SparseH5AccessPluginFactory()
 {
     setIcon(StyledIcon(createPluginIcon("SAH5")));
 }
-
 
 AnalysisPlugin* SparseH5AccessPluginFactory::produce()
 {
