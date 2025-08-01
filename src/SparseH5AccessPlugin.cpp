@@ -118,8 +118,8 @@ void SparseH5AccessPlugin::updateVariable(size_t dim, size_t varIndex) {
     auto varInd = _settingsAction.getDataDimOneAction().getCurrentIndex();
 
     if (varInd < 0) {
-        varInd = 0;
-        qDebug() << "SparseH5AccessPlugin::updateVariable: unexpected behaviour -> varIndex < 0 : " << varInd;
+        qDebug() << "SparseH5AccessPlugin::updateVariable: unexpected behaviour, varIndex < 0 : " << varInd;
+        return;
     }
 
     auto sparseVals = _sparseMatrix->getColumn(varInd);
@@ -179,6 +179,7 @@ bool SparseH5AccessPlugin::saveFileToProject(QVariantMap& variantMap) const
 
     if (success) {
         variantMap["FileOnDiskName"]    = QVariant::fromValue(fileOnDiskName.string());
+        qDebug() << "SparseH5AccessPlugin::saveFileToProject: saved file to project: " << fileOnDiskName << ", load path: " << fileOnDiskPath;
     }
 
     return success;
@@ -196,6 +197,7 @@ bool SparseH5AccessPlugin::loadFileFromProject(const QVariantMap& variantMap)
     const fs::path loadPath     = projectPath / fileOnDiskName;
 
     if (!fs::exists(loadPath)) {
+        qDebug() << "SparseH5AccessPlugin::loadFileFromProject: file does not exist in project: " << fileOnDiskName << ", project path: " << projectPath;
         return false;
     }
 
