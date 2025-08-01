@@ -178,7 +178,7 @@ bool SparseH5AccessPlugin::saveFileToProject(QVariantMap& variantMap) const
     const bool success = fs::copy_file(fileOnDiskPath, savePath, fs::copy_options::overwrite_existing);
 
     if (success) {
-        variantMap["FileOnDiskName"]    = QVariant::fromValue(fileOnDiskName.string());
+        variantMap["FileOnDiskName"]    = QVariant::fromValue(QString::fromStdString(fileOnDiskName.string()));
         qDebug() << "SparseH5AccessPlugin::saveFileToProject: saved file to project: " << fileOnDiskName << ", load path: " << fileOnDiskPath;
     }
 
