@@ -191,8 +191,9 @@ bool SparseH5AccessPlugin::loadFileFromProject(const QVariantMap& variantMap)
         return false;
     }
 
+    const fs::path mvOpenDir    = mv::projects().getTemporaryDirPath(mv::AbstractProjectManager::TemporaryDirType::Open).toStdString();
     const fs::path projectPath  = mv::projects().getCurrentProject()->getFilePath().toStdString();
-    const fs::path loadPath     = projectPath / fileOnDiskName;
+    const fs::path loadPath     = mvOpenDir / fileOnDiskName;
 
     if (!fs::exists(loadPath)) {
         qDebug() << "SparseH5AccessPlugin::loadFileFromProject: file does not exist in project: " << fileOnDiskName << ", project path: " << projectPath;
