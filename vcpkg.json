@@ -4,6 +4,7 @@
   "dependencies": [
     {
       "name": "hdf5",
+      "default-features": false,
       "features": [ "cpp", "zlib" ] 
     }
   ],
