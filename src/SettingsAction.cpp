@@ -10,7 +10,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _dataDimOneAction(this, "Dim 1", {}, "")
 {
     setText("UMAP Settings");
-    setSerializationName("UMAP Settings");
+    setSerializationName("Sparse Matrix Access");
 
     _fileOnDiskAction.setToolTip("H5 file on disk");
     _matrixTypeAction.setToolTip("Storage type of sparse matrix on disk");
