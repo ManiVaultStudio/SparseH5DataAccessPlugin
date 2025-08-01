@@ -14,6 +14,7 @@
 #include "SettingsAction.h"
 
 #include <QString>
+#include <QVariantMap>
 
 #include <cstdint>
 
@@ -37,6 +38,9 @@ private:
     void updateFile(const QString& filePathQt);
 
     void updateVariable(size_t dim, size_t varIndex);
+
+    bool saveFileToProject(QVariantMap& variantMap) const;
+    bool loadFileFromProject(const QVariantMap& variantMap);
 
 public: // Serialization
 
