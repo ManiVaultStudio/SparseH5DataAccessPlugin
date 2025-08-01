@@ -140,8 +140,6 @@ void SparseH5AccessPlugin::fromVariantMap(const QVariantMap& variantMap)
 {
     AnalysisPlugin::fromVariantMap(variantMap);
 
-    mv::util::variantMapMustContain(variantMap, "Settings");
-
     _settingsAction.fromParentVariantMap(variantMap);
 
     if (_settingsAction.getSaveDataToProjectChecked()) {
