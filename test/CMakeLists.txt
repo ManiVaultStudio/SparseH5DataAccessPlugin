@@ -73,4 +73,4 @@ target_compile_features(${SPARSEH5ACCESS_TESTS} PRIVATE cxx_std_20)
 target_compile_features(${SPARSEH5ACCESS_TESTS} PRIVATE c_std_17)
 
 # Instruction sets
-mv_check_and_set_AVX(${SPARSEH5ACCESS_TESTS} ${MV_UMAP_USE_AVX})
+mv_check_and_set_AVX(${SPARSEH5ACCESS_TESTS} ${MV_SH5A_USE_AVX})
