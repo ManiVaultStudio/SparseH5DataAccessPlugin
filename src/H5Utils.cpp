@@ -182,13 +182,13 @@ SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename)
     return sparseMatrixStringToType(format);
 }
 
-void SparseMatrixReader::readFile(const std::string& filename)
+bool SparseMatrixReader::readFile(const std::string& filename)
 {
     if (_data._file || !_data._filename.empty()) {
         reset();
     }
 
-    readMatrixFromFile(filename, _data);
+    return readMatrixFromFile(filename, _data);
 }
 
 static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {

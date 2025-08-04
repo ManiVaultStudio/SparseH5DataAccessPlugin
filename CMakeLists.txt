@@ -2,10 +2,16 @@ cmake_minimum_required(VERSION 3.22)
 
 option(MV_SH5A_USE_OPENMP "Use OpenMP - by default ON" ON)
 option(MV_SH5A_USE_AVX "Use AVX if available - by default OFF" OFF)
+option(MV_SH5A_BUILD_TESTS "Build unit tests for SparseH5Access plugin" OFF)
 
 # -----------------------------------------------------------------------------
 # vcpkg Options
 # -----------------------------------------------------------------------------
+
+if(MV_SH5A_BUILD_TESTS)
+    list(APPEND VCPKG_MANIFEST_FEATURES "unittests-sh5a")
+    message(STATUS "Adding to config: unittests-sh5a")
+endif()
 
 if(WIN32)
     set(VCPKG_HOST_TRIPLET "x64-windows-static-md" CACHE STRING "")
@@ -59,6 +65,9 @@ endif()
 set(SPARSEH5ACCESS_PLUGIN
     src/SparseH5AccessPlugin.h
     src/SparseH5AccessPlugin.cpp
+)
+
+set(SPARSEH5ACCESS_UTILS
     src/H5Utils.h
     src/H5Utils.cpp
 )
@@ -75,6 +84,7 @@ set(SPARSEH5ACCESS_AUX
 set(SPARSEH5ACCESS_SOURCES
     ${SPARSEH5ACCESS_PLUGIN}
     ${SPARSEH5ACCESS_SETTINGS}
+    ${SPARSEH5ACCESS_UTILS}
 )
 
 source_group(Plugin FILES ${SPARSEH5ACCESS_PLUGIN})
@@ -146,4 +156,12 @@ mv_handle_plugin_config(${SPARSEH5ACCESS})
 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set_property(TARGET ${SPARSEH5ACCESS} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<IF:$<CONFIG:DEBUG>,${ManiVault_INSTALL_DIR}/Debug,$<IF:$<CONFIG:RELWITHDEBINFO>,${ManiVault_INSTALL_DIR}/RelWithDebInfo,${ManiVault_INSTALL_DIR}/Release>>)
     set_property(TARGET ${SPARSEH5ACCESS} PROPERTY VS_DEBUGGER_COMMAND $<IF:$<CONFIG:DEBUG>,"${ManiVault_INSTALL_DIR}/Debug/ManiVault Studio.exe",$<IF:$<CONFIG:RELWITHDEBINFO>,"${ManiVault_INSTALL_DIR}/RelWithDebInfo/ManiVault Studio.exe","${ManiVault_INSTALL_DIR}/Release/ManiVault Studio.exe">>)
+endif()
+
+# -----------------------------------------------------------------------------
+# Unit testing
+# -----------------------------------------------------------------------------
+if(MV_SH5A_BUILD_TESTS)
+	MESSAGE( STATUS "Build ${SPARSEH5ACCESS} unit tests")
+	add_subdirectory("test")
 endif()
