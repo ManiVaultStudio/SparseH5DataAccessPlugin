@@ -63,13 +63,16 @@ public: // Utility
 
 public: // Setup
 
-    void readFile(const std::string& filename);
+    bool readFile(const std::string& filename);
     void reset() { _data.reset(); };
 
 public: // Getter
 
     virtual std::vector<float> getRow(int row_idx) const = 0;
     virtual std::vector<float> getColumn(int col_idx) const = 0;
+
+    bool hasObsNames() const { return !_data._obs_names.empty(); }
+    bool hasVarNames() const { return !_data._var_names.empty(); }
 
     const std::vector<std::string>& getObsNames() const { return _data._obs_names; }
     const std::vector<std::string>& getVarNames() const { return _data._var_names; }
@@ -79,6 +82,8 @@ public: // Getter
 
     SparseMatrixType getType() const { return _type; }
     std::string getTypeString() const { return sparseMatrixTypeToString(_type); }
+
+    const SparseMatrixData& getRawData() const { return _data; }
 
 protected:
     SparseMatrixData    _data = {};

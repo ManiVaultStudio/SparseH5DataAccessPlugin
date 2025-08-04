@@ -44,9 +44,9 @@ def save_h5(data: ad.AnnData, filename: str | Path, storage_type: str):
         f.create_dataset('shape', data=data_in_memory.shape)
 
         # Optional metadata
-        if hasattr(data, 'obs_names') and data.obs_names is not None:
+        if hasattr(data, 'obs_names') and len(data.obs_names) == data.n_obs:
             f.create_dataset('obs_names', data=data.obs_names.to_numpy(), dtype=data_string_dt)
-        if hasattr(data, 'var_names') and data.var_names is not None:
+        if hasattr(data, 'var_names') and len(data.var_names) == data.n_vars:
             f.create_dataset('var_names', data=data.var_names.to_numpy(), dtype=data_string_dt)
 
     del data_in_memory
