@@ -146,11 +146,11 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
     auto& dataDimsAction = _settingsAction.getDataDimsAction();
 
     dataDimsAction.blockSignals(true);
-    dataDimsAction.setSelectedOptions({});
+    dataDimsAction.setSelectedOptions(QSet<std::int32_t>{});
     dataDimsAction.setOptions(varNames);
     dataDimsAction.blockSignals(false);
 
-    dataDimsAction.setSelectedOptions( { varNames.begin(), varNames.begin() + _numDims });
+    dataDimsAction.setSelectedOptions( QSet<std::int32_t>{ 0, 1 });
 
 }
 
