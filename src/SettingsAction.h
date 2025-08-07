@@ -1,7 +1,7 @@
 #pragma once
 
 #include "actions/GroupAction.h"
-#include "actions/OptionAction.h"
+#include "actions/OptionsAction.h"
 #include "actions/FilePickerAction.h"
 #include "actions/StringAction.h"
 #include "actions/ToggleAction.h"
@@ -25,7 +25,7 @@ public: // Action getters
     mv::gui::FilePickerAction& getFileOnDiskAction() { return _fileOnDiskAction; }
     mv::gui::StringAction& getMatrixTypeAction() { return _matrixTypeAction; }
     mv::gui::StringAction& getNumAvailableDimsAction() { return _numAvailableDimsAction; }
-    mv::gui::OptionAction& getDataDimOneAction() { return _dataDimOneAction; }
+    mv::gui::OptionsAction& getDataDimsAction() { return _dataDimsAction; }
     mv::gui::ToggleAction& getSaveDataToProjectAction() { return _saveDataToProjectAction; }
 
 public: // Serialization
@@ -37,6 +37,6 @@ protected:
     mv::gui::FilePickerAction      _fileOnDiskAction;           /** File on disk */
     mv::gui::StringAction          _matrixTypeAction;           /** Type of sparse matrix */
     mv::gui::StringAction          _numAvailableDimsAction;     /** Shows number of available dimension */
-    mv::gui::OptionAction          _dataDimOneAction;           /** First dimension */
+    mv::gui::OptionsAction         _dataDimsAction;             /** Data dimension */
     mv::gui::ToggleAction          _saveDataToProjectAction;    /** Whether to save the data form disk to the project */
 };

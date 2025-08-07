@@ -43,7 +43,7 @@ endif()
 # -----------------------------------------------------------------------------
 # Dependencies
 # -----------------------------------------------------------------------------
-find_package(Qt6 COMPONENTS Widgets WebEngineWidgets REQUIRED)
+find_package(Qt6 COMPONENTS Widgets WebEngineWidgets Concurrent REQUIRED)
 find_package(ManiVault COMPONENTS Core PointData CONFIG QUIET)
 
 find_package(hdf5 CONFIG REQUIRED COMPONENTS CXX HL)
@@ -120,6 +120,7 @@ mv_check_and_set_AVX(${SPARSEH5ACCESS} ${MV_SH5A_USE_AVX})
 # -----------------------------------------------------------------------------
 target_link_libraries(${SPARSEH5ACCESS} PRIVATE Qt6::Widgets)
 target_link_libraries(${SPARSEH5ACCESS} PRIVATE Qt6::WebEngineWidgets)
+target_link_libraries(${SPARSEH5ACCESS} PRIVATE Qt6::Concurrent)
 
 target_link_libraries(${SPARSEH5ACCESS} PRIVATE ManiVault::Core)
 target_link_libraries(${SPARSEH5ACCESS} PRIVATE ManiVault::PointData)
