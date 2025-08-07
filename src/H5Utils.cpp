@@ -191,6 +191,74 @@ bool SparseMatrixReader::readFile(const std::string& filename)
     return readMatrixFromFile(filename, _data);
 }
 
+void SparseMatrixReader::reset() {
+    _data.reset(); 
+    _type = SparseMatrixType::UNKNOWN;
+    _lookupOrderRows.clear();
+    _cacheRows.clear();
+    _lookupOrderColumns.clear();
+    _cacheColumns.clear();
+};
+
+std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<int>& order, int id) {
+    auto it = cache.find(id);
+    if (it != cache.cend()) {
+        // Move row_idx to front to mark as most recently used
+        order.erase(it->second.second);
+        order.push_front(id);
+        it->second.second = order.begin();
+        return &(it->second.first);
+    }
+    return std::nullopt;
+}
+
+void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data) {
+    if (cache.size() >= MAX_CACHE_SIZE) {
+        // Remove least recently used
+        int leastRecentID = order.back();
+        order.pop_back();
+        cache.erase(leastRecentID);
+    }
+
+    // Insert new item
+    order.push_front(id);
+    cache[id] = { data, order.begin() };
+}
+
+std::vector<float> SparseMatrixReader::getRow(int row_idx) {
+    // Check cache
+    const auto cacheResult = lookupCache(_cacheRows, _lookupOrderRows, row_idx);
+
+    if (cacheResult.has_value() && cacheResult.value() != nullptr) {
+        return *(cacheResult.value());
+    }
+
+    // Otherwise, fetch data
+    std::vector<float> data = getRowImpl(row_idx);
+
+    // Add to cache
+    saveToCache(_cacheRows, _lookupOrderRows, row_idx, data);
+
+    return data;
+}
+
+std::vector<float> SparseMatrixReader::getColumn(int col_idx) {
+    // Check cache
+    const auto cacheResult = lookupCache(_cacheColumns, _lookupOrderColumns, col_idx);
+
+    if (cacheResult.has_value() && cacheResult.value() != nullptr) {
+        return *(cacheResult.value());
+    }
+
+    // Otherwise, fetch data
+    std::vector<float> data = getColumnImpl(col_idx);
+
+    // Add to cache
+    saveToCache(_cacheColumns, _lookupOrderColumns, col_idx, data);
+
+    return data;
+}
+
 static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
     std::vector<float> dense_array(size_second, 0.0f);
 
@@ -313,12 +381,12 @@ CSRReader::CSRReader(const std::string& filename) :
 
 CSRReader::~CSRReader() = default;
 
-std::vector<float>CSRReader::getRow(int row_idx) const 
+std::vector<float>CSRReader::getRowImpl(int row_idx) const
 {
     return getArrayPrimary(_data, _data._num_rows, _data._num_cols, row_idx);
 }
 
-std::vector<float> CSRReader::getColumn(int col_idx) const 
+std::vector<float> CSRReader::getColumnImpl(int col_idx) const
 {
     return getArraySecondary(_data, _data._num_rows, _data._num_cols, col_idx);
 }
@@ -340,12 +408,12 @@ CSCReader::CSCReader(const std::string& filename) :
 
 CSCReader::~CSCReader() = default;
 
-std::vector<float> CSCReader::getColumn(int col_idx) const 
+std::vector<float> CSCReader::getColumnImpl(int col_idx) const
 {
     return getArrayPrimary(_data, _data._num_cols, _data._num_rows, col_idx);
 }
 
-std::vector<float> CSCReader::getRow(int row_idx) const 
+std::vector<float> CSCReader::getRowImpl(int row_idx) const 
 {
     return getArraySecondary(_data, _data._num_cols, _data._num_rows, row_idx);
 }
