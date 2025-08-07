@@ -15,6 +15,57 @@ Q_PLUGIN_METADATA(IID "studio.manivault.SparseH5AccessPlugin")
 using namespace mv;
 namespace fs = std::filesystem;
 
+// =============================================================================
+// Utils
+// =============================================================================
+
+static QStringList toQStringList(const std::vector<std::string>& str_vec) {
+
+    const std::int64_t n = static_cast<std::int64_t>(str_vec.size());
+
+    QStringList str_list;
+    str_list.resizeForOverwrite(n);
+
+#pragma omp parallel for
+    for (std::int64_t i = 0; i < n; ++i) {
+        str_list[i] = QString::fromStdString(str_vec[i]);
+    }
+
+    return str_list;
+}
+
+static std::vector<std::string> toStdStringVec(const QStringList& qstr_lst) {
+
+    const std::int64_t n = static_cast<std::int64_t>(qstr_lst.size());
+
+    std::vector<std::string> str_vec(n);
+
+#pragma omp parallel for
+    for (std::int64_t i = 0; i < n; ++i) {
+        str_vec[i] = qstr_lst[i].toStdString();
+    }
+
+    return str_vec;
+}
+
+static std::vector<QString> toQStringVec(const QStringList& qstr_lst) {
+
+    const std::int64_t n = static_cast<std::int64_t>(qstr_lst.size());
+
+    std::vector<QString> str_vec(n);
+
+#pragma omp parallel for
+    for (std::int64_t i = 0; i < n; ++i) {
+        str_vec[i] = qstr_lst[i];
+    }
+
+    return str_vec;
+}
+
+// =============================================================================
+// Plugin
+// =============================================================================
+
 SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     AnalysisPlugin(factory),
     _settingsAction(this),
@@ -58,21 +109,6 @@ void SparseH5AccessPlugin::init()
     // Automatically focus on the data set
     _outputPoints->getDataHierarchyItem().select();
     _outputPoints->_infoAction->collapse();
-}
-
-static QStringList toQStringList(const std::vector<std::string>& str_vec) {
-
-    std::int64_t n = static_cast<std::int64_t>(str_vec.size());
-
-    QStringList str_list;
-    str_list.resizeForOverwrite(n);
-
-#pragma omp parallel for
-    for (std::int64_t i = 0; i < n; ++i) {
-        str_list[i] = QString::fromStdString(str_vec[i]);
-    }
-
-    return str_list;
 }
 
 void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
@@ -208,9 +244,10 @@ bool SparseH5AccessPlugin::loadFileFromProject(const QVariantMap& variantMap)
 // =============================================================================
 // Factory
 // =============================================================================
+
 SparseH5AccessPluginFactory::SparseH5AccessPluginFactory()
 {
-    setIcon(StyledIcon(createPluginIcon("SAH5")));
+    setIcon(util::StyledIcon(createPluginIcon("SAH5")));
 }
 
 AnalysisPlugin* SparseH5AccessPluginFactory::produce()
