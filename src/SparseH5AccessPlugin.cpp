@@ -82,7 +82,7 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     _blockReadingFromFile(false)
 {
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
-    connect(_settingsAction.getDataDimActions()[0].get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
+    connect(_settingsAction.getDataDimActions().back().get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
 }
 
 SparseH5AccessPlugin::~SparseH5AccessPlugin()
