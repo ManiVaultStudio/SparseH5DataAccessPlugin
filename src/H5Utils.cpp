@@ -2,8 +2,10 @@
 
 #include <H5Cpp.h>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -58,10 +60,17 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 {
     SparseMatrixType type = SparseMatrixType::UNKNOWN;
 
-    if (typeStr == "CSR")
+    auto str_toupper = [](std::string str) -> std::string {
+        std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c);});
+        return str;
+        };
+
+    const std::string typeStrUpperCase = str_toupper(typeStr);
+
+    if (typeStrUpperCase == "CSR")
         type = SparseMatrixType::CSR;
 
-    if (typeStr == "CSC")
+    if (typeStrUpperCase == "CSC")
         type = SparseMatrixType::CSC;
 
     return type;
