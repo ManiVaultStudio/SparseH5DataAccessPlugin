@@ -217,6 +217,7 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
     _sparseMatrix->readFile(filePath);
 
     _dimensionNames = toQStringList(_sparseMatrix->getVarNames());
+    _selectedDimensionIndices = {};
 
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(_dimensionNames.size()));
