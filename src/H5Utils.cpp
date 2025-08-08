@@ -3,6 +3,7 @@
 #include <H5Cpp.h>
 
 #include <array>
+#include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -200,6 +201,31 @@ void SparseMatrixReader::reset() {
     _cacheColumns.clear();
 };
 
+void SparseMatrixReader::setMaxCacheSize(const size_t newSize) {
+    if (newSize == _maxCacheSize)
+        return;
+
+    _maxCacheSize = newSize;
+    removeLeastRecentlyUsed(_cacheRows, _lookupOrderRows);
+    removeLeastRecentlyUsed(_cacheColumns, _lookupOrderColumns);
+
+    assert(_cacheRows.size() <= _maxCacheSize);
+    assert(_cacheColumns.size() <= _maxCacheSize);
+}
+
+void SparseMatrixReader::removeLeastRecentlyUsed(Cache& cache, std::list<int>& order) const {
+    assert(order.size() == cache.size());
+
+    if (cache.empty())
+        return;
+
+    const int leastRecentID = order.back();
+    order.pop_back();
+    cache.erase(leastRecentID);
+
+    assert(order.size() == cache.size());
+}
+
 std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<int>& order, int id) const {
     if (!_useCache)
         return std::nullopt;
@@ -220,11 +246,8 @@ void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id
     if (!_useCache)
         return;
 
-    if (cache.size() >= MAX_CACHE_SIZE) {
-        // Remove least recently used
-        int leastRecentID = order.back();
-        order.pop_back();
-        cache.erase(leastRecentID);
+    if (cache.size() >= _maxCacheSize) {
+        removeLeastRecentlyUsed(cache, order);
     }
 
     // Insert new item
