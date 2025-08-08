@@ -40,6 +40,7 @@ private:
     void updateFile(const QString& filePathQt);
 
     void readDataFromDisk();
+    void updateOptionsForDim(const int numDim, const QStringList& dimNames);
 
     bool saveFileToProject(QVariantMap& variantMap) const;
     bool loadFileFromProject(const QVariantMap& variantMap);
@@ -56,6 +57,7 @@ private:
     size_t                      _numDims;           /** The number of dimensions */
     mv::Dataset<Points>         _outputPoints;
     std::vector<std::int32_t>   _selectedDimensionIndices;
+    QStringList                 _dimensionNames;
 
     CSRReader                   _csrMatrix;
     CSCReader                   _cscMatrix;

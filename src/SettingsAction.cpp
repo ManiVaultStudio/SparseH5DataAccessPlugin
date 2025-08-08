@@ -50,14 +50,14 @@ void SettingsAction::appendSingleDataDimAction(const int id)
     _dataDimsAction.addAction(action.get());
 }
 
-bool SettingsAction::addDataDimAction()
+size_t SettingsAction::addDataDimAction()
 {
     appendSingleDataDimAction(_dataDimActions.size() + 1);
 
     assert(_dataDimActions.size() == _dataDimsAction.getActions().size());
     assert(_dataDimActions.size() >= 1);
 
-    return true;
+    return _dataDimActions.size();
 }
 
 bool SettingsAction::removeDataDimAction()

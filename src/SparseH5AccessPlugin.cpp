@@ -76,17 +76,75 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     _numDims(1),
     _outputPoints(),
     _selectedDimensionIndices(),
+    _dimensionNames(),
     _csrMatrix(),
     _cscMatrix(),
     _sparseMatrix(&_cscMatrix),
     _blockReadingFromFile(false)
 {
+    auto updateDataAfterOptionUIChanged = [this]() {
+        const size_t newNumDims = _settingsAction.getDataDimActions().size();
+        if (_sparseMatrix->getMaxCacheSize() < newNumDims && newNumDims > 10) {
+            _sparseMatrix->setMaxCacheSize(newNumDims);
+        }
+        _numDims = newNumDims;
+        readDataFromDisk();
+        };
+
+    auto onAddOptionButton = [this, updateDataAfterOptionUIChanged]([[maybe_unused]] bool checked) {
+
+        if (_settingsAction.getDataDimActions().size() >= _sparseMatrix->getNumCols()) {
+            qDebug() << "SparseH5AccessPlugin: cannot add more dimension options than number of dimensions in data";
+            return;
+        }
+
+        const size_t newNumDims = _settingsAction.addDataDimAction();
+        assert(newNumDims >= 1 && newNumDims < _dimensionNames.size());
+
+        updateOptionsForDim(newNumDims - 1, _dimensionNames);
+
+        connect(_settingsAction.getDataDimActions().back().get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
+
+        updateDataAfterOptionUIChanged();
+        };
+
+    auto onRemoveOptionButton = [this, updateDataAfterOptionUIChanged]([[maybe_unused]] bool checked) {
+
+        if (_settingsAction.getDataDimActions().size() <= 1) {
+            qDebug() << "SparseH5AccessPlugin: cannot remove any more dimensions, must at least show one";
+            return;
+        }
+
+        const bool removeSucess = _settingsAction.removeDataDimAction();
+
+        if (!removeSucess) {
+            qDebug() << "SparseH5AccessPlugin: cannot remove any more dimensions, must show at least one";
+            return;
+        }
+
+        updateDataAfterOptionUIChanged();
+        };
+
+    connect(&_settingsAction.getAddRemoveButtonAction().getAddOptionButton(), &gui::TriggerAction::triggered, this, onAddOptionButton);
+    connect(&_settingsAction.getAddRemoveButtonAction().getRemoveOptionButton(), &gui::TriggerAction::triggered, this, onRemoveOptionButton);
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
     connect(_settingsAction.getDataDimActions().back().get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
 }
 
 SparseH5AccessPlugin::~SparseH5AccessPlugin()
 {
+}
+
+void SparseH5AccessPlugin::updateOptionsForDim(const int numDim, const QStringList& dimNames)
+{
+    _blockReadingFromFile = true;
+
+    auto& action = _settingsAction.getDataDimActions()[numDim];
+    action->setCurrentIndex(0);
+    action->setOptions(dimNames);
+    action->setCurrentIndex(numDim);
+
+    _blockReadingFromFile = false;
 }
 
 void SparseH5AccessPlugin::init()
@@ -110,7 +168,9 @@ void SparseH5AccessPlugin::init()
     else {
         _outputPoints = getOutputDataset<Points>();
     }
-    
+
+    _settingsAction.getAddRemoveButtonAction().changeEnabled(false, false);
+
     // Add settings to UI
     _outputPoints->addAction(_settingsAction);
     
@@ -121,6 +181,8 @@ void SparseH5AccessPlugin::init()
 
 void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 {
+    _settingsAction.resetDataDimActions();
+
     _csrMatrix.reset();
     _cscMatrix.reset();
 
@@ -142,26 +204,17 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     _sparseMatrix->readFile(filePath);
 
-    // if data has at least two dimensions, use 2 dims
-    const auto varNames = toQStringList(_sparseMatrix->getVarNames());
+    _dimensionNames = toQStringList(_sparseMatrix->getVarNames());
 
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
-    _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
+    _settingsAction.getNumAvailableDimsAction().setString(QString::number(_dimensionNames.size()));
+    _settingsAction.getAddRemoveButtonAction().changeEnabled(true, true);
 
-    auto& dataDimActions = _settingsAction.getDataDimActions();
+    assert(_settingsAction.getDataDimActions().size() == _numDims);
 
-    assert(dataDimActions.size() == _numDims);
-
-    _blockReadingFromFile = true;
-
-    for (int numDimAction = 0; numDimAction < _numDims; numDimAction++) {
-        auto& action = dataDimActions[numDimAction];
-        action->setCurrentIndex(0);
-        action->setOptions(varNames);
-        action->setCurrentIndex(numDimAction);
+    for (int numDim = 0; numDim < _numDims; numDim++) {
+        updateOptionsForDim(numDim, _dimensionNames);
     }
-
-    _blockReadingFromFile = false;
 
     readDataFromDisk();
 }

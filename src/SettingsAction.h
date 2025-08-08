@@ -23,8 +23,8 @@ public:
     ~SettingsAction();
 
 public:
-    bool addDataDimAction();    // returns whether adding was successfull
-    bool removeDataDimAction(); // returns whether removing was successfull
+    size_t addDataDimAction();      // returns whether new number of data dim options
+    bool removeDataDimAction();     // returns whether removing was successful
     void resetDataDimActions();
 
 public: // Getters
