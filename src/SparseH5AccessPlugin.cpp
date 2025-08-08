@@ -206,11 +206,8 @@ void SparseH5AccessPlugin::readDataFromDisk() {
         };
 
     auto passDataToCore = [this](ResultType result) -> void {
-        const auto& data = result.first;
-        const auto& names = result.second;
-
-        _outputPoints->setData(std::move(data), _numDims);
-        _outputPoints->setDimensionNames(names);
+        _outputPoints->setData(std::move(result.first), _numDims);
+        _outputPoints->setDimensionNames(result.second);
         mv::events().notifyDatasetDataChanged(_outputPoints);
         };
 
