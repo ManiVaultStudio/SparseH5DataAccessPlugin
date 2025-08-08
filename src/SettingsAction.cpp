@@ -1,5 +1,7 @@
 #include "SettingsAction.h"
 
+#include <cassert>
+
 using namespace mv;
 
 SettingsAction::SettingsAction(QObject* parent) :
@@ -7,6 +9,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _fileOnDiskAction(this, "H5 file on disk"),
     _matrixTypeAction(this, "Matrix storage", "None loaded yet"),
     _numAvailableDimsAction(this, "Variables", "None loaded yet"),
+    _addRemoveDimsAction(this),
     _dataDimActions(),
     _dataDimsAction(this, "Data dimensions"),
     _saveDataToProjectAction(this, "Save data to project", false)
@@ -22,7 +25,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _matrixTypeAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
     _numAvailableDimsAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
 
-    const int numDimActions = 2;
+    constexpr int numDimActions = 2;
     for (int numDimAction = 0; numDimAction < numDimActions; numDimAction++) { 
         auto& action = _dataDimActions.emplace_back(std::make_unique<gui::OptionAction>(this, QString("Dim %1").arg(numDimAction), QStringList{}, QString{}));
         action->setToolTip(QString("Data dimension %1").arg(numDimAction));
@@ -37,6 +40,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     addAction(&_fileOnDiskAction);
     addAction(&_matrixTypeAction);
     addAction(&_numAvailableDimsAction);
+    addAction(&_addRemoveDimsAction);
     addAction(&_dataDimsAction);
     addAction(&_saveDataToProjectAction);
 }

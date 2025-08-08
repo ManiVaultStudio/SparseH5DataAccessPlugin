@@ -75,6 +75,8 @@ set(SPARSEH5ACCESS_UTILS
 set(SPARSEH5ACCESS_SETTINGS
     src/SettingsAction.h
     src/SettingsAction.cpp
+    src/AddRemoveButtonAction.h
+    src/AddRemoveButtonAction.cpp
 )
 
 set(SPARSEH5ACCESS_AUX
