@@ -94,6 +94,9 @@ void SparseH5AccessPlugin::init()
     const auto inputData = getInputDataset<Points>();
     _numPoints = inputData->getNumPoints();
 
+    assert(_settingsAction.getDataDimActions().size() == 1);
+    _numDims = _settingsAction.getDataDimActions().size();
+
     if (!mv::projects().isOpeningProject() && !mv::projects().isImportingProject()) {
         _outputPoints = Dataset<Points>(mv::data().createDerivedDataset("Sparse data access", inputData, inputData));
         setOutputDataset(_outputPoints);
@@ -141,12 +144,13 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     // if data has at least two dimensions, use 2 dims
     const auto varNames = toQStringList(_sparseMatrix->getVarNames());
-    _numDims = (varNames.size() >= 2) ? 2 : 1;
 
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
     auto& dataDimActions = _settingsAction.getDataDimActions();
+
+    assert(dataDimActions.size() == _numDims);
 
     _blockReadingFromFile = true;
 
