@@ -13,12 +13,6 @@ public:
      */
     AddRemoveButtonAction(QObject* parent);
 
-    void changeEnabled(bool add, bool rem)
-    {
-        _addOptionButton.setEnabled(add);
-        _removeOptionButton.setEnabled(rem);
-    }
-
 public: // Action getters
 
     mv::gui::TriggerAction& getAddOptionButton() { return _addOptionButton; }
