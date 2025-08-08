@@ -1,5 +1,6 @@
 #include "SparseH5AccessPlugin.h"
 
+#include <CoreInterface.h>
 #include <Project.h>
 #include <util/Icon.h>
 
@@ -175,7 +176,9 @@ void SparseH5AccessPlugin::readDataFromDisk() {
 
     std::swap(_selectedDimensionIndices, selectedDimensionIndices);
 
-    auto readDataAsync = [this]() -> void {
+    using ResultType = std::pair<std::vector<float>, std::vector<QString>>;
+
+    auto readDataAsync = [this]() -> ResultType {
 
         assert(_numDims = _selectedDimensionIndices.size());
 
@@ -199,15 +202,20 @@ void SparseH5AccessPlugin::readDataFromDisk() {
             }
         }
 
-        // update data
-        _outputPoints->setData(std::move(dimensionValuesInterleaved), _numDims);
-        mv::events().notifyDatasetDataChanged(_outputPoints);
-
-        _outputPoints->setDimensionNames(dimensionNames);
-
+        return std::make_pair(std::move(dimensionValuesInterleaved), std::move(dimensionNames));
         };
 
-    QFuture<void> fvoid = QtConcurrent::run(readDataAsync);
+    auto passDataToCore = [this](ResultType result) -> void {
+        const auto& data = result.first;
+        const auto& names = result.second;
+
+        _outputPoints->setData(std::move(data), _numDims);
+        _outputPoints->setDimensionNames(names);
+        mv::events().notifyDatasetDataChanged(_outputPoints);
+        };
+
+    // Read data asynchronously, then update core data in main thread
+    auto future = QtConcurrent::run(readDataAsync).then(this, passDataToCore);
 }
 
 void SparseH5AccessPlugin::fromVariantMap(const QVariantMap& variantMap)
