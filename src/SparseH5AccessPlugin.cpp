@@ -147,6 +147,17 @@ void SparseH5AccessPlugin::updateOptionsForDim(const int numDim, const QStringLi
     _blockReadingFromFile = false;
 }
 
+void SparseH5AccessPlugin::setSettingsEnabled(bool enablded)
+{
+    _settingsAction.getFileOnDiskAction().setEnabled(enablded);
+    _settingsAction.getAddRemoveButtonAction().getAddOptionButton().setEnabled(enablded);
+    _settingsAction.getAddRemoveButtonAction().getRemoveOptionButton().setEnabled(enablded);
+
+    for (auto& dataDimAction : _settingsAction.getDataDimActions()) {
+        dataDimAction->setEnabled(enablded);
+    }
+}
+
 void SparseH5AccessPlugin::init()
 {
     const auto inputData = getInputDataset<Points>();
@@ -169,7 +180,8 @@ void SparseH5AccessPlugin::init()
         _outputPoints = getOutputDataset<Points>();
     }
 
-    _settingsAction.getAddRemoveButtonAction().changeEnabled(false, false);
+    setSettingsEnabled(false);
+    _settingsAction.getFileOnDiskAction().setEnabled(true);   // the filepicker must be enabled at the start
 
     // Add settings to UI
     _outputPoints->addAction(_settingsAction);
@@ -205,10 +217,11 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
     _sparseMatrix->readFile(filePath);
 
     _dimensionNames = toQStringList(_sparseMatrix->getVarNames());
+    _selectedDimensionIndices = {};
 
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(_dimensionNames.size()));
-    _settingsAction.getAddRemoveButtonAction().changeEnabled(true, true);
+    setSettingsEnabled(true);
 
     assert(_settingsAction.getDataDimActions().size() == _numDims);
 
@@ -267,10 +280,10 @@ void SparseH5AccessPlugin::readDataFromDisk() {
         _outputPoints->setData(std::move(result.first), _numDims);
         _outputPoints->setDimensionNames(result.second);
         mv::events().notifyDatasetDataChanged(_outputPoints);
-        _settingsAction.getAddRemoveButtonAction().changeEnabled(true, true);
+        setSettingsEnabled(true);
         };
 
-    _settingsAction.getAddRemoveButtonAction().changeEnabled(false, false);
+    setSettingsEnabled(false);
 
     // Read data asynchronously, then update core data in main thread
     auto future = QtConcurrent::run(readDataAsync).then(this, passDataToCore);
