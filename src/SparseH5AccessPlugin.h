@@ -60,6 +60,8 @@ private:
     CSRReader                   _csrMatrix;
     CSCReader                   _cscMatrix;
     SparseMatrixReader*         _sparseMatrix;
+
+    bool                        _blockReadingFromFile;
 };
 
 // =============================================================================

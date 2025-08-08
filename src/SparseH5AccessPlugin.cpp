@@ -77,7 +77,8 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     _selectedDimensionIndices(),
     _csrMatrix(),
     _cscMatrix(),
-    _sparseMatrix(&_cscMatrix)
+    _sparseMatrix(&_cscMatrix),
+    _blockReadingFromFile(false)
 {
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
     connect(_settingsAction.getDataDimActions()[0].get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
@@ -146,19 +147,25 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     auto& dataDimActions = _settingsAction.getDataDimActions();
 
+    _blockReadingFromFile = true;
+
     for (int numDimAction = 0; numDimAction < _numDims; numDimAction++) {
         auto& action = dataDimActions[numDimAction];
-        action->blockSignals(true);
         action->setCurrentIndex(0);
         action->setOptions(varNames);
         action->setCurrentIndex(numDimAction);
-        action->blockSignals(false);
     }
+
+    _blockReadingFromFile = false;
 
     readDataFromDisk();
 }
 
 void SparseH5AccessPlugin::readDataFromDisk() {
+
+    if (_blockReadingFromFile) {
+        return;
+    }
 
     std::vector<std::int32_t> selectedDimensionIndices = _settingsAction.getSelectedOptionIndices();
 
