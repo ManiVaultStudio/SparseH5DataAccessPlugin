@@ -68,7 +68,7 @@ public: // Utility
 
 public: // Setup
 
-    bool setUseCache(const bool useCache) { _useCache = useCache; }
+    void setUseCache(const bool useCache) { _useCache = useCache; }
     void setMaxCacheSize(const size_t newSize);
     bool readFile(const std::string& filename);
     void reset();
