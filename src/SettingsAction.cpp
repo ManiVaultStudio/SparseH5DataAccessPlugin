@@ -25,13 +25,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _matrixTypeAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
     _numAvailableDimsAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
 
-    constexpr int numDimActions = 2;
-    for (int numDimAction = 0; numDimAction < numDimActions; numDimAction++) { 
-        auto& action = _dataDimActions.emplace_back(std::make_unique<gui::OptionAction>(this, QString("Dim %1").arg(numDimAction), QStringList{}, QString{}));
-        action->setToolTip(QString("Data dimension %1").arg(numDimAction));
-        action->setDefaultWidgetFlag(gui::OptionAction::WidgetFlag::LineEdit);
-        _dataDimsAction.addAction(action.get());
-    }
+    appendSingleDataDimAction(1);
 
     _fileOnDiskAction.setPlaceHolderString("Pick sparse H5 file...");
     _fileOnDiskAction.setFileType("Sparse H5 data");
@@ -46,6 +40,51 @@ SettingsAction::SettingsAction(QObject* parent) :
 }
 
 SettingsAction::~SettingsAction() {
+}
+
+void SettingsAction::appendSingleDataDimAction(const int id)
+{
+    auto& action = _dataDimActions.emplace_back(std::make_unique<gui::OptionAction>(this, QString("Dim %1").arg(id), QStringList{}, QString{}));
+    action->setToolTip(QString("Data dimension %1").arg(id));
+    action->setDefaultWidgetFlag(gui::OptionAction::WidgetFlag::LineEdit);
+    _dataDimsAction.addAction(action.get());
+}
+
+bool SettingsAction::addDataDimAction()
+{
+    appendSingleDataDimAction(_dataDimActions.size() + 1);
+
+    assert(_dataDimActions.size() == _dataDimsAction.getActions().size());
+    assert(_dataDimActions.size() >= 1);
+
+    return true;
+}
+
+bool SettingsAction::removeDataDimAction()
+{
+    if (_dataDimActions.size() <= 1)
+        return false;
+
+    disconnect(_dataDimActions.back().get(), nullptr, nullptr, nullptr);
+
+    _dataDimsAction.removeAction(_dataDimActions.back().get());
+    _dataDimActions.pop_back();
+
+    assert(_dataDimActions.size() >= 1);
+    assert(_dataDimActions.size() == _dataDimsAction.getActions().size());
+
+    return true;
+}
+
+void SettingsAction::resetDataDimActions()
+{
+    while (_dataDimActions.size() < 1) {
+        removeDataDimAction();
+    }
+
+    assert(_dataDimActions.size() == 1);
+
+    _dataDimActions.back()->initialize(QStringList{}, QString{});
 }
 
 std::vector<std::int32_t> SettingsAction::getSelectedOptionIndices() const

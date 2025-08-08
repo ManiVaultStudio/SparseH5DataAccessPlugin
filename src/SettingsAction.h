@@ -22,6 +22,11 @@ public:
     SettingsAction(QObject* parent = nullptr);
     ~SettingsAction();
 
+public:
+    bool addDataDimAction();    // returns whether adding was successfull
+    bool removeDataDimAction(); // returns whether removing was successfull
+    void resetDataDimActions();
+
 public: // Getters
 
     bool getSaveDataToProjectChecked() const { return _saveDataToProjectAction.isChecked(); }
@@ -33,6 +38,7 @@ public: // Action getters
     mv::gui::FilePickerAction& getFileOnDiskAction() { return _fileOnDiskAction; }
     mv::gui::StringAction& getMatrixTypeAction() { return _matrixTypeAction; }
     mv::gui::StringAction& getNumAvailableDimsAction() { return _numAvailableDimsAction; }
+    AddRemoveButtonAction& getAddRemoveButtonAction() { return _addRemoveDimsAction; }
     OptionActions& getDataDimActions() { return _dataDimActions; }
     mv::gui::ToggleAction& getSaveDataToProjectAction() { return _saveDataToProjectAction; }
 
@@ -40,6 +46,9 @@ public: // Serialization
 
     void fromVariantMap(const QVariantMap& variantMap) override;
     QVariantMap toVariantMap() const override;
+
+private:
+    void appendSingleDataDimAction(const int id);
 
 protected:
 
