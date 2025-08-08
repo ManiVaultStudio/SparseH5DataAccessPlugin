@@ -13,10 +13,10 @@ public:
      */
     AddRemoveButtonAction(QObject* parent);
 
-    void changeEnabled(bool cont, bool stop)
+    void changeEnabled(bool add, bool rem)
     {
-        _addOptionButton.setEnabled(cont);
-        _removeOptionButton.setEnabled(stop);
+        _addOptionButton.setEnabled(add);
+        _removeOptionButton.setEnabled(rem);
     }
 
 public: // Action getters
