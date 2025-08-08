@@ -35,8 +35,8 @@ void print(const std::vector<T>& vec, int width) {
 }
 
 void print(const SparseMatrixReader& sparseMat, int width = 5) {
-	for (size_t row = 0; row < sparseMat.getNumRows(); row++) {
-		print(sparseMat.getRow(row), width);
+	for (int row = 0; row < sparseMat.getNumRows(); row++) {
+		print(sparseMat.getRowImpl(row), width);
 	}
 	std::cout << std::endl;
 }
