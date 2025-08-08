@@ -74,12 +74,13 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
     _numPoints(),
     _numDims(1),
     _outputPoints(),
+    _selectedDimensionIndices(),
     _csrMatrix(),
     _cscMatrix(),
     _sparseMatrix(&_cscMatrix)
 {
     connect(&_settingsAction.getFileOnDiskAction(), &gui::FilePickerAction::filePathChanged, this, &SparseH5AccessPlugin::updateFile);
-    connect(&_settingsAction.getDataDimsAction(), &gui::OptionsAction::selectedOptionsChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
+    connect(_settingsAction.getDataDimActions()[0].get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
 }
 
 SparseH5AccessPlugin::~SparseH5AccessPlugin()
@@ -99,7 +100,7 @@ void SparseH5AccessPlugin::init()
         initEmbeddingValues.resize(_numPoints * _numDims);
 
         _outputPoints->setData(std::move(initEmbeddingValues), _numDims);
-        events().notifyDatasetDataChanged(_outputPoints);
+        mv::events().notifyDatasetDataChanged(_outputPoints);
     }
     else {
         _outputPoints = getOutputDataset<Points>();
@@ -143,56 +144,57 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(varNames.size()));
 
-    auto& dataDimsAction = _settingsAction.getDataDimsAction();
+    auto& dataDimActions = _settingsAction.getDataDimActions();
 
-    dataDimsAction.blockSignals(true);
-    dataDimsAction.setSelectedOptions(QSet<std::int32_t>{});
-    dataDimsAction.setOptions(varNames);
-    dataDimsAction.blockSignals(false);
+    for (int numDimAction = 0; numDimAction < _numDims; numDimAction++) {
+        auto& action = dataDimActions[numDimAction];
+        action->blockSignals(true);
+        action->setCurrentIndex(0);
+        action->setOptions(varNames);
+        action->setCurrentIndex(numDimAction);
+        action->blockSignals(false);
+    }
 
-    dataDimsAction.setSelectedOptions( QSet<std::int32_t>{ 0, 1 });
-
+    readDataFromDisk();
 }
 
-void SparseH5AccessPlugin::readDataFromDisk(const QStringList& selectedOptions) {
+void SparseH5AccessPlugin::readDataFromDisk() {
 
-    if (selectedOptions.empty()) {
-        qDebug() << "SparseH5AccessPlugin::readDataFromDisk: selectedOptions size is 0";
+    std::vector<std::int32_t> selectedDimensionIndices = _settingsAction.getSelectedOptionIndices();
+
+    if (_selectedDimensionIndices == selectedDimensionIndices) {
         return;
     }
 
-    assert(_settingsAction.getDataDimsAction().getSelectedOptionIndices().size() == selectedOptions.size());
-
-    qDebug() << "SparseH5AccessPlugin::readDataFromDisk: " << selectedOptions;
+    std::swap(_selectedDimensionIndices, selectedDimensionIndices);
 
     auto readDataAsync = [this]() -> void {
-        const QList<std::int32_t> selectedOptionIdx = _settingsAction.getDataDimsAction().getSelectedOptionIndices();
 
-        _numDims = selectedOptionIdx.size();
+        assert(_numDims = _selectedDimensionIndices.size());
 
         // Read dimensions from disk
         std::vector<std::vector<float>> dimensionValues(_numDims);
         std::vector<QString> dimensionNames(_numDims);
         const std::vector<std::string>& allDimNames = _sparseMatrix->getVarNames();
         for (size_t dim = 0; dim < _numDims; ++dim) {
-            dimensionValues[dim] = _sparseMatrix->getColumn(selectedOptionIdx[dim]);
+            dimensionValues[dim] = _sparseMatrix->getColumn(_selectedDimensionIndices[dim]);
             dimensionNames[dim] = QString::fromStdString(allDimNames[dim]);
         }
 
         // Interleave data and pass to core
         const size_t total_size = _numPoints * _numDims;
-        std::vector<float> sparseVals_combined(total_size);
+        std::vector<float> dimensionValuesInterleaved(total_size);
 
 #pragma omp parallel for
         for (std::int64_t point = 0; point < static_cast<std::int64_t>(_numPoints); ++point) {
             for (size_t dim = 0; dim < _numDims; ++dim) {
-                sparseVals_combined[_numDims * point + dim] = dimensionValues[dim][point];
+                dimensionValuesInterleaved[_numDims * point + dim] = dimensionValues[dim][point];
             }
         }
 
         // update data
-        _outputPoints->setData(std::move(sparseVals_combined), _numDims);
-        events().notifyDatasetDataChanged(_outputPoints);
+        _outputPoints->setData(std::move(dimensionValuesInterleaved), _numDims);
+        mv::events().notifyDatasetDataChanged(_outputPoints);
 
         _outputPoints->setDimensionNames(dimensionNames);
 

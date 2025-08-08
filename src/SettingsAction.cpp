@@ -7,7 +7,8 @@ SettingsAction::SettingsAction(QObject* parent) :
     _fileOnDiskAction(this, "H5 file on disk"),
     _matrixTypeAction(this, "Matrix storage", "None loaded yet"),
     _numAvailableDimsAction(this, "Variables", "None loaded yet"),
-    _dataDimsAction(this, "Dimensions", {}, {}),
+    _dataDimActions(),
+    _dataDimsAction(this, "Data dimensions"),
     _saveDataToProjectAction(this, "Save data to project", false)
 {
     setText("UMAP Settings");
@@ -16,15 +17,18 @@ SettingsAction::SettingsAction(QObject* parent) :
     _fileOnDiskAction.setToolTip("H5 file on disk");
     _matrixTypeAction.setToolTip("Storage type of sparse matrix on disk");
     _numAvailableDimsAction.setToolTip("Number of variables/dimensions/channels in the data");
-    _dataDimsAction.setToolTip("Data dimensions");
     _saveDataToProjectAction.setToolTip("Saving the data from disk to a project\nmight yield very large project files and loading times!");
 
     _matrixTypeAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
     _numAvailableDimsAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
 
-    _dataDimsAction.setDefaultWidgetFlag(gui::OptionsAction::WidgetFlag::ComboBox ||
-                                         gui::OptionsAction::WidgetFlag::ListView ||
-                                         gui::OptionsAction::WidgetFlag::Selection);
+    const int numDimActions = 2;
+    for (int numDimAction = 0; numDimAction < numDimActions; numDimAction++) { 
+        auto& action = _dataDimActions.emplace_back(std::make_unique<gui::OptionAction>(this, QString("Dim %1").arg(numDimAction), QStringList{}, QString{}));
+        action->setToolTip(QString("Data dimension %1").arg(numDimAction));
+        action->setDefaultWidgetFlag(gui::OptionAction::WidgetFlag::LineEdit);
+        _dataDimsAction.addAction(action.get());
+    }
 
     _fileOnDiskAction.setPlaceHolderString("Pick sparse H5 file...");
     _fileOnDiskAction.setFileType("Sparse H5 data");
@@ -35,6 +39,22 @@ SettingsAction::SettingsAction(QObject* parent) :
     addAction(&_numAvailableDimsAction);
     addAction(&_dataDimsAction);
     addAction(&_saveDataToProjectAction);
+}
+
+SettingsAction::~SettingsAction() {
+}
+
+std::vector<std::int32_t> SettingsAction::getSelectedOptionIndices() const
+{
+    const size_t numOptions = _dataDimActions.size();
+    std::vector<std::int32_t> selectedOptionIndices(numOptions);
+
+    for (int numOption = 0; numOption < numOptions; numOption++) {
+        assert(_dataDimActions[numOption]);
+        selectedOptionIndices[numOption] = _dataDimActions[numOption]->getCurrentIndex();
+    }
+
+    return selectedOptionIndices;
 }
 
 void SettingsAction::fromVariantMap(const QVariantMap& variantMap)

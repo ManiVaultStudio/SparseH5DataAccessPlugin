@@ -18,6 +18,7 @@
 #include <QVariantMap>
 
 #include <cstdint>
+#include <vector>
 
 // =============================================================================
 // Analysis
@@ -38,7 +39,7 @@ private:
     // Default: select the first two dimensions of the data
     void updateFile(const QString& filePathQt);
 
-    void readDataFromDisk(const QStringList& selectedOptions);
+    void readDataFromDisk();
 
     bool saveFileToProject(QVariantMap& variantMap) const;
     bool loadFileFromProject(const QVariantMap& variantMap);
@@ -49,15 +50,16 @@ public: // Serialization
     Q_INVOKABLE QVariantMap toVariantMap() const override;
 
 private:
-    SettingsAction          _settingsAction;    /** General settings */
+    SettingsAction              _settingsAction;    /** General settings */
 
-    size_t                  _numPoints;         /** Numer of data points */
-    size_t                  _numDims;           /** The number of dimensions */
-    mv::Dataset<Points>     _outputPoints;
+    size_t                      _numPoints;         /** Numer of data points */
+    size_t                      _numDims;           /** The number of dimensions */
+    mv::Dataset<Points>         _outputPoints;
+    std::vector<std::int32_t>   _selectedDimensionIndices;
 
-    CSRReader               _csrMatrix;
-    CSCReader               _cscMatrix;
-    SparseMatrixReader*     _sparseMatrix;
+    CSRReader                   _csrMatrix;
+    CSCReader                   _cscMatrix;
+    SparseMatrixReader*         _sparseMatrix;
 };
 
 // =============================================================================
