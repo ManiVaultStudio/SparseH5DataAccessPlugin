@@ -306,7 +306,7 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
     const int arr_nnz = end - start;
 
     if (arr_nnz == 0) {
-        return dense_array;  // Empty arr
+        return dense_array;  // Empty array
     }
 
     try {
@@ -314,24 +314,25 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
         hsize_t offset = start;
         hsize_t count = arr_nnz;
 
-        // Read data slice
+        H5::DataSpace mem_space(1, &count);
+
+        // Read data
         H5::DataSpace data_space = data._data_ds->getSpace();
         data_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
-
-        H5::DataSpace mem_space(1, &count);
         std::vector<float> arr_data(arr_nnz);
         data._data_ds->read(arr_data.data(), H5::PredType::NATIVE_FLOAT, mem_space, data_space);
 
-        // Read indices slice
+        // Read indices
         H5::DataSpace indices_space = data._indices_ds->getSpace();
         indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
-
         std::vector<int> arr_indices(arr_nnz);
         data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
 
         // Populate dense arr
 #pragma omp parallel for
         for (std::int64_t i = 0; i < static_cast<std::int64_t>(arr_nnz); ++i) {
+            assert(arr_indices[i] >= 0);
+            assert(arr_indices[i] < size_second);
             dense_array[arr_indices[i]] = arr_data[i];
         }
     }
