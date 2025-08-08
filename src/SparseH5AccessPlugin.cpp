@@ -149,6 +149,7 @@ void SparseH5AccessPlugin::updateOptionsForDim(const int numDim, const QStringLi
 
 void SparseH5AccessPlugin::setSettingsEnabled(bool enablded)
 {
+    _settingsAction.getFileOnDiskAction().setEnabled(enablded);
     _settingsAction.getAddRemoveButtonAction().getAddOptionButton().setEnabled(enablded);
     _settingsAction.getAddRemoveButtonAction().getRemoveOptionButton().setEnabled(enablded);
 
