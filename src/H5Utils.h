@@ -71,7 +71,7 @@ public: // Setup
     void setUseCache(const bool useCache) { _useCache = useCache; }
     void setMaxCacheSize(const size_t newSize);
     bool readFile(const std::string& filename);
-    void reset();
+    void reset(const bool keepType = true);
 
 public: // Getter
 

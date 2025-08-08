@@ -192,13 +192,18 @@ bool SparseMatrixReader::readFile(const std::string& filename)
     return readMatrixFromFile(filename, _data);
 }
 
-void SparseMatrixReader::reset() {
+void SparseMatrixReader::reset(const bool keepType) {
     _data.reset(); 
-    _type = SparseMatrixType::UNKNOWN;
     _lookupOrderRows.clear();
     _cacheRows.clear();
     _lookupOrderColumns.clear();
     _cacheColumns.clear();
+    _maxCacheSize = 10;
+    _useCache = true;
+
+    if (!keepType) {
+        _type = SparseMatrixType::UNKNOWN;
+    }
 };
 
 void SparseMatrixReader::setMaxCacheSize(const size_t newSize) {
