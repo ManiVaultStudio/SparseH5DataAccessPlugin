@@ -115,9 +115,9 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
             return;
         }
 
-        const bool removeSucess = _settingsAction.removeDataDimAction();
+        const bool removeSuccess = _settingsAction.removeDataDimAction();
 
-        if (!removeSucess) {
+        if (!removeSuccess) {
             qDebug() << "SparseH5AccessPlugin: cannot remove any more dimensions, must show at least one";
             return;
         }
