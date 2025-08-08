@@ -14,9 +14,11 @@
 #include "SettingsAction.h"
 
 #include <QString>
+#include <QStringList>
 #include <QVariantMap>
 
 #include <cstdint>
+#include <vector>
 
 // =============================================================================
 // Analysis
@@ -37,7 +39,8 @@ private:
     // Default: select the first two dimensions of the data
     void updateFile(const QString& filePathQt);
 
-    void updateVariable(size_t dim, size_t varIndex);
+    void readDataFromDisk();
+    void updateOptionsForDim(const int numDim, const QStringList& dimNames);
 
     bool saveFileToProject(QVariantMap& variantMap) const;
     bool loadFileFromProject(const QVariantMap& variantMap);
@@ -48,15 +51,19 @@ public: // Serialization
     Q_INVOKABLE QVariantMap toVariantMap() const override;
 
 private:
-    SettingsAction          _settingsAction;    /** General settings */
+    SettingsAction              _settingsAction;    /** General settings */
 
-    size_t                  _numPoints;         /** Numer of data points */
-    size_t                  _numDims;           /** The number of dimensions */
-    mv::Dataset<Points>     _outputPoints;
+    size_t                      _numPoints;         /** Numer of data points */
+    size_t                      _numDims;           /** The number of dimensions */
+    mv::Dataset<Points>         _outputPoints;
+    std::vector<std::int32_t>   _selectedDimensionIndices;
+    QStringList                 _dimensionNames;
 
-    CSRReader               _csrMatrix;
-    CSCReader               _cscMatrix;
-    SparseMatrixReader*     _sparseMatrix;
+    CSRReader                   _csrMatrix;
+    CSCReader                   _cscMatrix;
+    SparseMatrixReader*         _sparseMatrix;
+
+    bool                        _blockReadingFromFile;
 };
 
 // =============================================================================
