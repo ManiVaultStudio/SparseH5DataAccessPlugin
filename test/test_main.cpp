@@ -17,8 +17,8 @@ const fs::path dataDir = current_file_path.parent_path() / "data";
 
 TEST_CASE("Read sparse matrices from H5", "[H5][CRS][CSC]") {
 
-	CSRReader               csrMatrix;
-	CSCReader               cscMatrix;
+	CSRReader             csrMatrix;
+	CSCReader             cscMatrix;
 	SparseMatrixReader*		sparseMatrix = nullptr;
 
 	fs::path fileNameSparseMatrix;
@@ -38,12 +38,16 @@ TEST_CASE("Read sparse matrices from H5", "[H5][CRS][CSC]") {
 		sparseMatrixType = "CSC";
 	}
 
+	assert(sparseMatrix != nullptr);
+
 	bool readSuccess = sparseMatrix->readFile((dataDir / fileNameSparseMatrix).string());
 
 	if (!readSuccess) {
 		info("ERROR: test file not loaded, probably it does not exist");
 		return;
 	}
+
+	sparseMatrix->setUseCache(false);
 
 	REQUIRE(sparseMatrix->getTypeString() == sparseMatrixType);
 
