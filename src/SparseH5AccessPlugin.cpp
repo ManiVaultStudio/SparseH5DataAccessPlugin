@@ -244,8 +244,9 @@ void SparseH5AccessPlugin::readDataFromDisk() {
         std::vector<QString> dimensionNames(_numDims);
         const std::vector<std::string>& allDimNames = _sparseMatrix->getVarNames();
         for (size_t dim = 0; dim < _numDims; ++dim) {
-            dimensionValues[dim] = _sparseMatrix->getColumn(_selectedDimensionIndices[dim]);
-            dimensionNames[dim] = QString::fromStdString(allDimNames[dim]);
+            const std::int32_t selectedDimIndex = _selectedDimensionIndices[dim];
+            dimensionValues[dim] = _sparseMatrix->getColumn(selectedDimIndex);
+            dimensionNames[dim] = QString::fromStdString(allDimNames[selectedDimIndex]);
         }
 
         // Interleave data and pass to core
