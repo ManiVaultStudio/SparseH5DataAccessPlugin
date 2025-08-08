@@ -237,7 +237,7 @@ void SparseH5AccessPlugin::readDataFromDisk() {
 
     auto readDataAsync = [this]() -> ResultType {
 
-        assert(_numDims = _selectedDimensionIndices.size());
+        assert(_numDims == _selectedDimensionIndices.size());
 
         // Read dimensions from disk
         std::vector<std::vector<float>> dimensionValues(_numDims);
