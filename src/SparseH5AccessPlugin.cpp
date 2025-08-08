@@ -267,7 +267,10 @@ void SparseH5AccessPlugin::readDataFromDisk() {
         _outputPoints->setData(std::move(result.first), _numDims);
         _outputPoints->setDimensionNames(result.second);
         mv::events().notifyDatasetDataChanged(_outputPoints);
+        _settingsAction.getAddRemoveButtonAction().changeEnabled(true, true);
         };
+
+    _settingsAction.getAddRemoveButtonAction().changeEnabled(false, false);
 
     // Read data asynchronously, then update core data in main thread
     auto future = QtConcurrent::run(readDataAsync).then(this, passDataToCore);
