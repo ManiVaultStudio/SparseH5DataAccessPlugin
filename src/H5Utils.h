@@ -68,8 +68,9 @@ public: // Utility
 
 public: // Setup
 
+    bool setUseCache(const bool useCache) { _useCache = useCache; }
     bool readFile(const std::string& filename);
-    void reset();;
+    void reset();
 
 public: // Getter
 
@@ -93,20 +94,23 @@ public: // Getter
 
     const SparseMatrixData& getRawData() const { return _data; }
 
+    bool getUseCache() const { return _useCache; }
+
 private:
-    std::optional<std::vector<float>*> lookupCache(Cache& cache, std::list<int>& order, int id);
-    void saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data);
+    std::optional<std::vector<float>*> lookupCache(Cache& cache, std::list<int>& order, int id) const;
+    void saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data) const;
 
 protected:
-    SparseMatrixData    _data = {};
-    SparseMatrixType    _type = SparseMatrixType::UNKNOWN;
+    SparseMatrixData     _data = {};
+    SparseMatrixType     _type = SparseMatrixType::UNKNOWN;
 
     static constexpr size_t MAX_CACHE_SIZE = 10;
 
-    std::list<int> _lookupOrderRows; // Most recently used at front
-    Cache          _cacheRows;
-    std::list<int> _lookupOrderColumns; // Most recently used at front
-    Cache          _cacheColumns;
+    bool                 _useCache = true;
+    std::list<int>       _lookupOrderRows = {}; // Most recently used at front
+    Cache                _cacheRows = {};
+    std::list<int>       _lookupOrderColumns = {}; // Most recently used at front
+    Cache                _cacheColumns = {};
 };
 
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data);

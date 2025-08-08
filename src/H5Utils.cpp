@@ -200,7 +200,10 @@ void SparseMatrixReader::reset() {
     _cacheColumns.clear();
 };
 
-std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<int>& order, int id) {
+std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<int>& order, int id) const {
+    if (!_useCache)
+        return std::nullopt;
+
     auto it = cache.find(id);
     if (it != cache.cend()) {
         // Move row_idx to front to mark as most recently used
@@ -209,10 +212,14 @@ std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache,
         it->second.second = order.begin();
         return &(it->second.first);
     }
+
     return std::nullopt;
 }
 
-void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data) {
+void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data) const {
+    if (!_useCache)
+        return;
+
     if (cache.size() >= MAX_CACHE_SIZE) {
         // Remove least recently used
         int leastRecentID = order.back();
