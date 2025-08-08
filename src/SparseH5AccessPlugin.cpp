@@ -181,6 +181,7 @@ void SparseH5AccessPlugin::init()
     }
 
     setSettingsEnabled(false);
+    _settingsAction.getFileOnDiskAction().setEnabled(true);   // the filepicker must be enabled at the start
 
     // Add settings to UI
     _outputPoints->addAction(_settingsAction);
