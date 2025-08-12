@@ -63,4 +63,11 @@ You can also install [HDF5](https://github.com/HDFGroup/hdf5/) with [vcpkg](http
 ```bash
 ./vcpkg install hdf5[core,cpp,zlib]:x64-windows-static-md
 ```
-Depending on your OS the `VCPKG_TARGET_TRIPLET` might vary, e.g. for linux you probably don't need to specify any triplet since it automatically defaults to building static libraries.
+Depending on your OS the `VCPKG_TARGET_TRIPLET` might vary, e.g. for Linux you probably don't need to specify any triplet since it automatically defaults to building static libraries.
+
+## Testing
+Set the CMake option `MV_SH5A_BUILD_TESTS` to `ON` to build a test target. This requires [Catch2](https://github.com/catchorg/Catch2/):
+```bash
+./vcpkg install catch2:x64-windows-static-md
+```
+You'll also need to run `create_reference_data.py` in the `test` folder to create some test ground truth data.
