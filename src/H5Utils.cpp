@@ -16,7 +16,7 @@
 // H5 utilities
 // =============================================================================
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name) {
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name) {
     std::string value = "";
 
     try {
@@ -31,6 +31,15 @@ std::string readAttributeString(H5::H5File& file, const std::string& attr_name) 
 
     return value;
 }
+
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name) {
+    return loc.attrExists(attr_name);
+}
+
+bool groupExists(const H5::H5File& file, const std::string& path) {
+    return H5Lexists(file.getLocId(), path.c_str(), H5P_DEFAULT) > 0;
+}
+
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -187,7 +196,22 @@ void SparseMatrixData::reset()
 
 SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename) {
     H5::H5File file = H5::H5File(filename, H5F_ACC_RDONLY);
-    std::string format = readAttributeString(file, "format");
+
+    std::string format = "";
+
+    if (file.attrExists("format")) {
+        format = readAttributeString(file, "format");
+    }
+    else if (file.attrExists("encoding-type")) {
+        format = readAttributeString(file, "encoding-type");
+    }
+    else if (groupExists(file, "X")) {
+        H5::Group grp_X = file.openGroup("X");
+
+        if (grp_X.attrExists("encoding-type")) {
+            format = readAttributeString(grp_X, "encoding-type");
+        }
+    }
 
     return sparseMatrixStringToType(format);
 }

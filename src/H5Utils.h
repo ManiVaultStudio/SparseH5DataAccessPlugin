@@ -16,9 +16,13 @@
 namespace H5 {
     class H5File;
     class DataSet;
+    class H5Object;
 }
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name);
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name);
+
+bool groupExists(const H5::H5File& file, const std::string& path);
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name);
 
 // =============================================================================
 // Sparse matrix common utilities
