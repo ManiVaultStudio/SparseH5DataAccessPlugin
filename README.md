@@ -48,10 +48,10 @@ def save_h5(sparse_mat: sp.csr_matrix | sp.csc_matrix, filename: str | Path, sto
         # Optional metadata
         if obs_names is not None and len(obs_names) == sparse_mat.shape[0]:
             group_obs = f.create_group("obs")
-            group_obs.create_dataset('obs_names', data=obs_names, dtype=data_string_dt)
+            group_obs.create_dataset('_index', data=obs_names, dtype=data_string_dt)
         if var_names is not None and len(var_names) == sparse_mat.shape[1]:
             group_var = f.create_group("var")
-            group_var.create_dataset('var_names', data=var_names, dtype=data_string_dt)
+            group_var.create_dataset('_index', data=var_names, dtype=data_string_dt)
 
 
 sparse_matrix = myAnnData.X.to_memory()
