@@ -357,6 +357,7 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
     std::vector<float> dense_array(size_second, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_primary) {
+        std::cerr << "getArrayPrimary: could not read from index" << std::endl;
         return dense_array;  // invalid data sets
     }
 
@@ -406,7 +407,8 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
     std::vector<float> dense_array(size_primary, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_second) {
-        return dense_array;  // invalid datasets or column index
+        std::cerr << "getArraySecondary: could not read from index" << std::endl;
+        return dense_array;  // invalid datasets or index
     }
 
     try {
