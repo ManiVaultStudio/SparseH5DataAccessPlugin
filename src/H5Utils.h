@@ -16,9 +16,13 @@
 namespace H5 {
     class H5File;
     class DataSet;
+    class H5Object;
 }
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name);
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name);
+
+bool groupExists(const H5::H5File& file, const std::string& path);
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name);
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -48,9 +52,9 @@ struct SparseMatrixData {
     DataSet_p _indices_ds;
     DataSet_p _data_ds;
 
-    int _num_rows = 0;
-    int _num_cols = 0;
-    std::vector<int> _indptr = {};              // Column pointers (size = num_cols + 1)
+    std::int64_t _num_rows = 0;
+    std::int64_t _num_cols = 0;
+    std::vector<std::int64_t> _indptr = {};              // Column pointers (size = num_cols + 1)
 
     std::vector<std::string> _obs_names = {};
     std::vector<std::string> _var_names = {};

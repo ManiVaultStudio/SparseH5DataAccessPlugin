@@ -16,7 +16,7 @@
 // H5 utilities
 // =============================================================================
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name) {
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name) {
     std::string value = "";
 
     try {
@@ -31,6 +31,15 @@ std::string readAttributeString(H5::H5File& file, const std::string& attr_name) 
 
     return value;
 }
+
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name) {
+    return loc.attrExists(attr_name);
+}
+
+bool groupExists(const H5::H5File& file, const std::string& path) {
+    return H5Lexists(file.getLocId(), path.c_str(), H5P_DEFAULT) > 0;
+}
+
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -67,10 +76,10 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 
     const std::string typeStrUpperCase = str_toupper(typeStr);
 
-    if (typeStrUpperCase == "CSR")
+    if (typeStrUpperCase == "CSR" || typeStrUpperCase == "CSR_MATRIX")
         type = SparseMatrixType::CSR;
 
-    if (typeStrUpperCase == "CSC")
+    if (typeStrUpperCase == "CSC" || typeStrUpperCase == "CSC_MATRIX")
         type = SparseMatrixType::CSC;
 
     return type;
@@ -79,48 +88,74 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 {
     if (!std::filesystem::exists(filename)) {
+        std::cerr << "readMatrixFromFile: file does not exist" << filename << std::endl;
         return false;
     }
 
+    // TODO: add some checks if the type on disk is actually int64
     try {
         data._filename = filename;
         data._file = std::make_unique<H5::H5File>(data._filename, H5F_ACC_RDONLY);
 
+        if (!groupExists(*(data._file.get()), "X")) {
+            std::cerr << "readMatrixFromFile: group X does not exist" << std::endl;
+            return false;
+        }
+
+        H5::Group Xgrp = data._file->openGroup("X");
+
         // Read shape
-        H5::DataSet shape_ds = data._file->openDataSet("/shape");
-        std::array<int, 2> shape{};
-        shape_ds.read(shape.data(), H5::PredType::NATIVE_INT);
+        H5::Attribute shape_attr = Xgrp.openAttribute("shape");
+        std::array<std::int64_t, 2> shape{};
+        shape_attr.read(H5::PredType::NATIVE_INT64, shape.data());
         data._num_rows = shape[0];
         data._num_cols = shape[1];
 
+        std::array<std::string, 3> datasets_names = { "data", "indices", "indptr" };
+        if (std::any_of(datasets_names.begin(), datasets_names.end(), [&Xgrp](const std::string& datasets_name) {
+            return !Xgrp.nameExists(datasets_name);
+            }))
+        {
+            std::cerr << "readMatrixFromFile: group X must have datasets data, indices, indptr" << std::endl;
+            return false;
+        }
+
         // Open datasets (but don't read data yet)
-        data._data_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/data"));
-        data._indices_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indices"));
-        data._indptr_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indptr"));
+        data._data_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("data"));
+        data._indices_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("indices"));
+        data._indptr_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("indptr"));
 
         // Read indptr array (small, need for row access)
         H5::DataSpace indptr_space = data._indptr_ds->getSpace();
         hsize_t indptr_size = {};
         indptr_space.getSimpleExtentDims(&indptr_size);
         data._indptr.resize(indptr_size);
-        data._indptr_ds->read(data._indptr.data(), H5::PredType::NATIVE_INT);
+        data._indptr_ds->read(data._indptr.data(), H5::PredType::NATIVE_INT64);
 
         // Read variable and observation names (if available)
-        auto readStringArray = [&data](const std::string& datasetName, std::vector<std::string>& dest) -> void {
+        auto readStringArray = [&data](const std::string& groupName, const std::string& datasetName, std::vector<std::string>& dest) -> void {
 
-            if (!data._file->nameExists(datasetName)) {
+            if (!groupExists(*(data._file.get()), groupName)) {
                 dest.clear();
                 return;
             }
 
-            H5::DataSet obs_ds = data._file->openDataSet(datasetName);
+            H5::Group grp = data._file->openGroup(groupName);
+
+            if (!grp.nameExists(datasetName)) {
+                dest.clear();
+                return;
+            }
+
+            H5::DataSet obs_ds = grp.openDataSet(datasetName);
             H5::DataSpace obs_space = obs_ds.getSpace();
             hsize_t n = {};
             obs_space.getSimpleExtentDims(&n);
 
             // Variable-length UTF-8 string type
             H5::StrType str_type(H5::PredType::C_S1, H5T_VARIABLE);
-            str_type.setCset(H5T_CSET_UTF8);
+            str_type.setCset(H5T_CSET_UTF8);        // UTF-8 character set
+            str_type.setStrpad(H5T_STR_NULLTERM);   // Null-terminated
 
             std::vector<char*> obs_raw(n);
             obs_ds.read(obs_raw.data(), str_type);
@@ -134,8 +169,8 @@ bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 
             };
 
-        readStringArray("/obs_names", data._obs_names);
-        readStringArray("/var_names", data._var_names);
+        readStringArray("obs", "_index", data._obs_names);
+        readStringArray("var", "_index", data._var_names);
     }
     catch (H5::FileIException& e) {
         std::cerr << "HDF5 file error: " << e.getDetailMsg() << std::endl;
@@ -187,7 +222,22 @@ void SparseMatrixData::reset()
 
 SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename) {
     H5::H5File file = H5::H5File(filename, H5F_ACC_RDONLY);
-    std::string format = readAttributeString(file, "format");
+
+    std::string format = "";
+
+    if (file.attrExists("format")) {
+        format = readAttributeString(file, "format");
+    }
+    else if (file.attrExists("encoding-type")) {
+        format = readAttributeString(file, "encoding-type");
+    }
+    else if (groupExists(file, "X")) {
+        H5::Group grp_X = file.openGroup("X");
+
+        if (grp_X.attrExists("encoding-type")) {
+            format = readAttributeString(grp_X, "encoding-type");
+        }
+    }
 
     return sparseMatrixStringToType(format);
 }
@@ -307,6 +357,7 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
     std::vector<float> dense_array(size_second, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_primary) {
+        std::cerr << "getArrayPrimary: could not read from index" << std::endl;
         return dense_array;  // invalid data sets
     }
 
@@ -356,7 +407,8 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
     std::vector<float> dense_array(size_primary, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_second) {
-        return dense_array;  // invalid datasets or column index
+        std::cerr << "getArraySecondary: could not read from index" << std::endl;
+        return dense_array;  // invalid datasets or index
     }
 
     try {
