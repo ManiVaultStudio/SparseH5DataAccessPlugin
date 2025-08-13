@@ -88,6 +88,7 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 {
     if (!std::filesystem::exists(filename)) {
+        std::cerr << "readMatrixFromFile: file does not exist" << filename << std::endl;
         return false;
     }
 
@@ -96,8 +97,10 @@ bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
         data._filename = filename;
         data._file = std::make_unique<H5::H5File>(data._filename, H5F_ACC_RDONLY);
 
-        if (!groupExists(*(data._file.get()), "X"))
+        if (!groupExists(*(data._file.get()), "X")) {
+            std::cerr << "readMatrixFromFile: group X does not exist" << std::endl;
             return false;
+        }
 
         H5::Group Xgrp = data._file->openGroup("X");
 
