@@ -58,6 +58,25 @@ sparse_matrix = myAnnData.X.to_memory()
 save_h5(sparse_matrix, "myFile.h5", "csr_matrix")
 ```
 
+This will create a H5 file like this:
+```
+/                       # root of the HDF5 file
+├── X                   # group holding the sparse matrix data
+│   ├── data            # 1D float array of non-zero values (float)
+│   ├── indices         # 1D int array: column indices for each nonzero
+│   ├── indptr          # 1D int array: row pointer offsets (length = n_obs + 1)
+│   └── (attrs)         # attributes describing encoding
+│       ├── encoding: "csr_matrix"
+│       ├── encoding-type: "csr_matrix"
+│       └── shape: [n_obs, n_vars]
+│
+├── var                 # group holding variable (column) names
+│   └── _index          # 1D string array of variable names
+│
+└── obs                 # (optional) group for observation names
+    └── _index          # 1D string array of observation IDs
+```
+
 ## Building
 You can also install [HDF5](https://github.com/HDFGroup/hdf5/) with [vcpkg](https://github.com/microsoft/vcpkg) and use `-DCMAKE_TOOLCHAIN_FILE="[YOURPATHTO]/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md` to point CMake to your vcpkg installation:
 ```bash
