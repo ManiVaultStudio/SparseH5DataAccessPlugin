@@ -109,9 +109,13 @@ bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
         data._num_cols = shape[1];
 
         std::array<std::string, 3> datasets_names = { "data", "indices", "indptr" };
-        if(std::any_of(datasets_names.begin(), datasets_names.end(), [&Xgrp](const std::string& datasets_name) {
+        if (std::any_of(datasets_names.begin(), datasets_names.end(), [&Xgrp](const std::string& datasets_name) {
             return !Xgrp.nameExists(datasets_name);
             }))
+        {
+            std::cerr << "readMatrixFromFile: group X must have datasets data, indices, indptr" << std::endl;
+            return false;
+        }
 
         // Open datasets (but don't read data yet)
         data._data_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("data"));
