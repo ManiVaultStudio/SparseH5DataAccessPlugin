@@ -42,7 +42,7 @@ SettingsAction::SettingsAction(QObject* parent) :
 SettingsAction::~SettingsAction() {
 }
 
-void SettingsAction::appendSingleDataDimAction(const int id)
+void SettingsAction::appendSingleDataDimAction(const size_t id)
 {
     auto& action = _dataDimActions.emplace_back(std::make_unique<gui::OptionAction>(this, QString("Dim %1").arg(id), QStringList{}, QString{}));
     action->setToolTip(QString("Data dimension %1").arg(id));

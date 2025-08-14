@@ -117,6 +117,12 @@ target_compile_features(${SPARSEH5ACCESS} PRIVATE cxx_std_20)
 # Instruction sets
 mv_check_and_set_AVX(${SPARSEH5ACCESS} ${MV_SH5A_USE_AVX})
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+     target_compile_options(${SPARSEH5ACCESS} PRIVATE /W3)
+else()
+    target_compile_options(${SPARSEH5ACCESS} PRIVATE -Wall -Wextra -Wpedantic -Wno-unknown-pragmas)
+endif()
+
 # -----------------------------------------------------------------------------
 # Target library linking
 # -----------------------------------------------------------------------------

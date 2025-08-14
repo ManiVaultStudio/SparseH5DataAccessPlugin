@@ -48,7 +48,7 @@ public: // Serialization
     QVariantMap toVariantMap() const override;
 
 private:
-    void appendSingleDataDimAction(const int id);
+    void appendSingleDataDimAction(const size_t id);
 
 protected:
 

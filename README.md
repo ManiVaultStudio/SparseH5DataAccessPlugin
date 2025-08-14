@@ -77,6 +77,8 @@ This will create a H5 file like this:
     └── _index          # 1D string array of observation IDs
 ```
 
+The current implementation expects `indices` and `indptr` to be of type `H5::PredType::NATIVE_INT64`, i.e. `std::int64_t`.
+
 ## Building
 You can also install [HDF5](https://github.com/HDFGroup/hdf5/) with [vcpkg](https://github.com/microsoft/vcpkg) and use `-DCMAKE_TOOLCHAIN_FILE="[YOURPATHTO]/vcpkg/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows-static-md` to point CMake to your vcpkg installation:
 ```bash

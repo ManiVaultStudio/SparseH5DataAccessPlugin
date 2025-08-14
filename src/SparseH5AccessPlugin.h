@@ -40,7 +40,7 @@ private:
     void updateFile(const QString& filePathQt);
 
     void readDataFromDisk();
-    void updateOptionsForDim(const int numDim, const QStringList& dimNames);
+    void updateOptionsForDim(const std::int32_t numDim, const QStringList& dimNames);
 
     bool saveFileToProject(QVariantMap& variantMap) const;
     bool loadFileFromProject(const QVariantMap& variantMap);
