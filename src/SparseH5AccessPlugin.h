@@ -45,8 +45,6 @@ private:
     bool saveFileToProject(QVariantMap& variantMap) const;
     bool loadFileFromProject(const QVariantMap& variantMap);
 
-    void setSettingsEnabled(bool enablded);
-
 public: // Serialization
 
     Q_INVOKABLE void fromVariantMap(const QVariantMap& variantMap) override;

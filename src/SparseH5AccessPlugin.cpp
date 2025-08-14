@@ -147,17 +147,6 @@ void SparseH5AccessPlugin::updateOptionsForDim(const std::int32_t numDim, const 
     _blockReadingFromFile = false;
 }
 
-void SparseH5AccessPlugin::setSettingsEnabled(bool enablded)
-{
-    _settingsAction.getFileOnDiskAction().setEnabled(enablded);
-    _settingsAction.getAddRemoveButtonAction().getAddOptionButton().setEnabled(enablded);
-    _settingsAction.getAddRemoveButtonAction().getRemoveOptionButton().setEnabled(enablded);
-
-    for (auto& dataDimAction : _settingsAction.getDataDimActions()) {
-        dataDimAction->setEnabled(enablded);
-    }
-}
-
 void SparseH5AccessPlugin::init()
 {
     const auto inputData = getInputDataset<Points>();
@@ -180,8 +169,9 @@ void SparseH5AccessPlugin::init()
         _outputPoints = getOutputDataset<Points>();
     }
 
-    setSettingsEnabled(false);
-    _settingsAction.getFileOnDiskAction().setEnabled(true);   // the filepicker must be enabled at the start
+    _settingsAction.setEnabled(false);
+    _settingsAction.getFileOnDiskAction().setEnabled(true);                 // the filepicker must be enabled at the start
+    _settingsAction.getStatusTextAction().setString("None loaded yet");     // the status must also not say that it's busy
 
     // Add settings to UI
     _outputPoints->addAction(_settingsAction);
@@ -221,7 +211,7 @@ void SparseH5AccessPlugin::updateFile(const QString& filePathQt)
 
     _settingsAction.getMatrixTypeAction().setString(QString::fromStdString(typeStr));
     _settingsAction.getNumAvailableDimsAction().setString(QString::number(_dimensionNames.size()));
-    setSettingsEnabled(true);
+    _settingsAction.setEnabled(true);
 
     assert(_settingsAction.getDataDimActions().size() == _numDims);
 
@@ -280,10 +270,10 @@ void SparseH5AccessPlugin::readDataFromDisk() {
         _outputPoints->setData(std::move(result.first), _numDims);
         _outputPoints->setDimensionNames(result.second);
         mv::events().notifyDatasetDataChanged(_outputPoints);
-        setSettingsEnabled(true);
+        _settingsAction.setEnabled(true);
         };
 
-    setSettingsEnabled(false);
+    _settingsAction.setEnabled(false);
 
     // Read data asynchronously, then update core data in main thread
     auto future = QtConcurrent::run(readDataAsync).then(this, passDataToCore);
