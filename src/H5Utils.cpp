@@ -277,20 +277,20 @@ void SparseMatrixReader::setMaxCacheSize(const size_t newSize) {
     assert(_cacheColumns.size() <= _maxCacheSize);
 }
 
-void SparseMatrixReader::removeLeastRecentlyUsed(Cache& cache, std::list<int>& order) const {
+void SparseMatrixReader::removeLeastRecentlyUsed(Cache& cache, std::list<std::int64_t>& order) const {
     assert(order.size() == cache.size());
 
     if (cache.empty())
         return;
 
-    const int leastRecentID = order.back();
+    const auto leastRecentID = order.back();
     order.pop_back();
     cache.erase(leastRecentID);
 
     assert(order.size() == cache.size());
 }
 
-std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<int>& order, int id) const {
+std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id) const {
     if (!_useCache)
         return std::nullopt;
 
@@ -306,7 +306,7 @@ std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache,
     return std::nullopt;
 }
 
-void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id, const std::vector<float>& data) const {
+void SparseMatrixReader::saveToCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id, const std::vector<float>& data) const {
     if (!_useCache)
         return;
 
@@ -319,7 +319,7 @@ void SparseMatrixReader::saveToCache(Cache& cache, std::list<int>& order, int id
     cache[id] = { data, order.begin() };
 }
 
-std::vector<float> SparseMatrixReader::getRow(int row_idx) {
+std::vector<float> SparseMatrixReader::getRow(std::int64_t row_idx) {
     // Check cache
     const auto cacheResult = lookupCache(_cacheRows, _lookupOrderRows, row_idx);
 
@@ -336,7 +336,7 @@ std::vector<float> SparseMatrixReader::getRow(int row_idx) {
     return data;
 }
 
-std::vector<float> SparseMatrixReader::getColumn(int col_idx) {
+std::vector<float> SparseMatrixReader::getColumn(std::int64_t col_idx) {
     // Check cache
     const auto cacheResult = lookupCache(_cacheColumns, _lookupOrderColumns, col_idx);
 
@@ -353,7 +353,7 @@ std::vector<float> SparseMatrixReader::getColumn(int col_idx) {
     return data;
 }
 
-static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
+static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const std::int64_t size_primary, const std::int64_t size_second, const std::int64_t idx) {
     std::vector<float> dense_array(size_second, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_primary) {
@@ -361,9 +361,9 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
         return dense_array;  // invalid data sets
     }
 
-    const int start = data._indptr[idx];
-    const int end = data._indptr[idx + 1];
-    const int arr_nnz = end - start;
+    const std::int64_t start = data._indptr[idx];
+    const std::int64_t end = data._indptr[idx + 1];
+    const std::int64_t arr_nnz = end - start;
 
     if (arr_nnz == 0) {
         return dense_array;  // Empty array
@@ -385,8 +385,8 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
         // Read indices
         H5::DataSpace indices_space = data._indices_ds->getSpace();
         indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
-        std::vector<int> arr_indices(arr_nnz);
-        data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+        std::vector<std::int64_t> arr_indices(arr_nnz);
+        data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT64, mem_space, indices_space);
 
         // Populate dense arr
 #pragma omp parallel for
@@ -403,7 +403,7 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
     return dense_array;
 }
 
-static std::vector<float> getArraySecondary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
+static std::vector<float> getArraySecondary(const SparseMatrixData& data, const std::int64_t size_primary, const std::int64_t size_second, const std::int64_t idx) {
     std::vector<float> dense_array(size_primary, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_second) {
@@ -413,10 +413,10 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
 
     try {
         // We need to scan through all arrays to find entries in the requested column
-        for (int arr = 0; arr < size_primary; ++arr) {
-            const int start = data._indptr[arr];
-            const int end = data._indptr[arr + 1];
-            const int arr_nnz = end - start;
+        for (std::int64_t arr = 0; arr < size_primary; ++arr) {
+            const std::int64_t start = data._indptr[arr];
+            const std::int64_t end = data._indptr[arr + 1];
+            const std::int64_t arr_nnz = end - start;
 
             if (arr_nnz == 0) {
                 continue;  // Empty arr, skip
@@ -431,11 +431,11 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
             indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
 
             H5::DataSpace mem_space(1, &count);
-            std::vector<int> arr_indices(arr_nnz);
-            data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+            std::vector<std::int64_t> arr_indices(arr_nnz);
+            data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT64, mem_space, indices_space);
 
             // Check if this arr has an entry at the requested column
-            for (int i = 0; i < arr_nnz; ++i) {
+            for (std::int64_t i = 0; i < arr_nnz; ++i) {
                 if (arr_indices[i] == idx) {
                     // Found the column! Now read the corresponding data value
                     hsize_t data_offset = start + i;
@@ -478,12 +478,12 @@ CSRReader::CSRReader(const std::string& filename) :
 
 CSRReader::~CSRReader() = default;
 
-std::vector<float>CSRReader::getRowImpl(int row_idx) const
+std::vector<float>CSRReader::getRowImpl(std::int64_t row_idx) const
 {
     return getArrayPrimary(_data, _data._num_rows, _data._num_cols, row_idx);
 }
 
-std::vector<float> CSRReader::getColumnImpl(int col_idx) const
+std::vector<float> CSRReader::getColumnImpl(std::int64_t col_idx) const
 {
     return getArraySecondary(_data, _data._num_rows, _data._num_cols, col_idx);
 }
@@ -505,12 +505,12 @@ CSCReader::CSCReader(const std::string& filename) :
 
 CSCReader::~CSCReader() = default;
 
-std::vector<float> CSCReader::getColumnImpl(int col_idx) const
+std::vector<float> CSCReader::getColumnImpl(std::int64_t col_idx) const
 {
     return getArrayPrimary(_data, _data._num_cols, _data._num_rows, col_idx);
 }
 
-std::vector<float> CSCReader::getRowImpl(int row_idx) const 
+std::vector<float> CSCReader::getRowImpl(std::int64_t row_idx) const
 {
     return getArraySecondary(_data, _data._num_cols, _data._num_rows, row_idx);
 }

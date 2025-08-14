@@ -93,7 +93,7 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
 
     auto onAddOptionButton = [this, updateDataAfterOptionUIChanged]([[maybe_unused]] bool checked) {
 
-        if (_settingsAction.getDataDimActions().size() >= _sparseMatrix->getNumCols()) {
+        if (_settingsAction.getDataDimActions().size() >= static_cast<size_t>(_sparseMatrix->getNumCols())) {
             qDebug() << "SparseH5AccessPlugin: cannot add more dimension options than number of dimensions in data";
             return;
         }
@@ -101,7 +101,7 @@ SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
         const size_t newNumDims = _settingsAction.addDataDimAction();
         assert(newNumDims >= 1 && newNumDims < _dimensionNames.size());
 
-        updateOptionsForDim(newNumDims - 1, _dimensionNames);
+        updateOptionsForDim(static_cast<std::int32_t>(newNumDims - 1), _dimensionNames);
 
         connect(_settingsAction.getDataDimActions().back().get(), &gui::OptionAction::currentIndexChanged, this, &SparseH5AccessPlugin::readDataFromDisk);
 
@@ -135,7 +135,7 @@ SparseH5AccessPlugin::~SparseH5AccessPlugin()
 {
 }
 
-void SparseH5AccessPlugin::updateOptionsForDim(const int numDim, const QStringList& dimNames)
+void SparseH5AccessPlugin::updateOptionsForDim(const std::int32_t numDim, const QStringList& dimNames)
 {
     _blockReadingFromFile = true;
 
