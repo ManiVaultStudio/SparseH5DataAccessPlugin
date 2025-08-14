@@ -54,8 +54,8 @@ void SettingsAction::setEnabled(bool enabled)
     _addRemoveDimsAction.setEnabled(enabled);
     _matrixTypeAction.setEnabled(enabled);
     _numAvailableDimsAction.setEnabled(enabled);
+    _dataDimsAction.setEnabled(enabled);
     _saveDataToProjectAction.setEnabled(enabled);
-
     _statusTextAction.setEnabled(enabled);
 
     if (enabled) {
