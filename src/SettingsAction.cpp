@@ -9,6 +9,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _fileOnDiskAction(this, "H5 file on disk"),
     _matrixTypeAction(this, "Matrix storage", "None loaded yet"),
     _numAvailableDimsAction(this, "Variables", "None loaded yet"),
+    _statusTextAction(this, "Status", "None loaded yet"),
     _addRemoveDimsAction(this),
     _dataDimActions(),
     _dataDimsAction(this, "Data dimensions"),
@@ -19,11 +20,13 @@ SettingsAction::SettingsAction(QObject* parent) :
 
     _fileOnDiskAction.setToolTip("H5 file on disk");
     _matrixTypeAction.setToolTip("Storage type of sparse matrix on disk");
-    _numAvailableDimsAction.setToolTip("Number of variables/dimensions/channels in the data");
+    _numAvailableDimsAction.setToolTip("Current status, e.g., readin/idle");
+    _statusTextAction.setToolTip("Number of variables/dimensions/channels in the data");
     _saveDataToProjectAction.setToolTip("Saving the data from disk to a project\nmight yield very large project files and loading times!");
 
     _matrixTypeAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
     _numAvailableDimsAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
+    _statusTextAction.setDefaultWidgetFlags(gui::StringAction::WidgetFlag::Label);
 
     appendSingleDataDimAction(1);
 
@@ -34,12 +37,38 @@ SettingsAction::SettingsAction(QObject* parent) :
     addAction(&_fileOnDiskAction);
     addAction(&_matrixTypeAction);
     addAction(&_numAvailableDimsAction);
+    addAction(&_statusTextAction);
     addAction(&_addRemoveDimsAction);
     addAction(&_dataDimsAction);
     addAction(&_saveDataToProjectAction);
 }
 
 SettingsAction::~SettingsAction() {
+}
+
+void SettingsAction::setEnabled(bool enabled)
+{
+    _fileOnDiskAction.setEnabled(enabled);
+    _addRemoveDimsAction.getAddOptionButton().setEnabled(enabled);
+    _addRemoveDimsAction.getRemoveOptionButton().setEnabled(enabled);
+    _addRemoveDimsAction.setEnabled(enabled);
+    _matrixTypeAction.setEnabled(enabled);
+    _numAvailableDimsAction.setEnabled(enabled);
+    _saveDataToProjectAction.setEnabled(enabled);
+
+    _statusTextAction.setEnabled(enabled);
+
+    if (enabled) {
+        _statusTextAction.setString("Done");
+    }
+    else {
+        _statusTextAction.setString("Reading...");
+    }
+
+    for (auto& dataDimAction : _dataDimActions) {
+        dataDimAction->setEnabled(enabled);
+    }
+
 }
 
 void SettingsAction::appendSingleDataDimAction(const size_t id)
@@ -106,10 +135,12 @@ void SettingsAction::fromVariantMap(const QVariantMap& variantMap)
 
     _fileOnDiskAction.fromParentVariantMap(variantMap);
     _matrixTypeAction.fromParentVariantMap(variantMap);
+    _statusTextAction.fromParentVariantMap(variantMap);
     _numAvailableDimsAction.fromParentVariantMap(variantMap);
     _dataDimsAction.fromParentVariantMap(variantMap);
     _saveDataToProjectAction.fromParentVariantMap(variantMap);
 }
+
 
 QVariantMap SettingsAction::toVariantMap() const
 {
@@ -117,6 +148,7 @@ QVariantMap SettingsAction::toVariantMap() const
 
     _fileOnDiskAction.insertIntoVariantMap(variantMap);
     _matrixTypeAction.insertIntoVariantMap(variantMap);
+    _statusTextAction.insertIntoVariantMap(variantMap);
     _numAvailableDimsAction.insertIntoVariantMap(variantMap);
     _dataDimsAction.insertIntoVariantMap(variantMap);
     _saveDataToProjectAction.insertIntoVariantMap(variantMap);

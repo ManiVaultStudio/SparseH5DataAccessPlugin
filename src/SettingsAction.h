@@ -22,6 +22,8 @@ public:
     SettingsAction(QObject* parent = nullptr);
     ~SettingsAction();
 
+    void setEnabled(bool enabled);
+
 public:
     size_t addDataDimAction();      // returns whether new number of data dim options
     bool removeDataDimAction();     // returns whether removing was successful
@@ -38,6 +40,7 @@ public: // Action getters
     mv::gui::FilePickerAction& getFileOnDiskAction() { return _fileOnDiskAction; }
     mv::gui::StringAction& getMatrixTypeAction() { return _matrixTypeAction; }
     mv::gui::StringAction& getNumAvailableDimsAction() { return _numAvailableDimsAction; }
+    mv::gui::StringAction& getStatusTextAction() { return _statusTextAction; }
     AddRemoveButtonAction& getAddRemoveButtonAction() { return _addRemoveDimsAction; }
     OptionActions& getDataDimActions() { return _dataDimActions; }
     mv::gui::ToggleAction& getSaveDataToProjectAction() { return _saveDataToProjectAction; }
@@ -55,6 +58,7 @@ protected:
     mv::gui::FilePickerAction   _fileOnDiskAction;           /** File on disk */
     mv::gui::StringAction       _matrixTypeAction;           /** Type of sparse matrix */
     mv::gui::StringAction       _numAvailableDimsAction;     /** Shows number of available dimension */
+    mv::gui::StringAction       _statusTextAction;           /** Shows number of available dimension */
     AddRemoveButtonAction       _addRemoveDimsAction;        /** Buttons to add/remove dimension option */
     OptionActions               _dataDimActions;             /** Data dimension actions */
     mv::gui::GroupAction        _dataDimsAction;             /** Group of data dimension actions */
