@@ -2,7 +2,10 @@
 
 #include <H5Cpp.h>
 
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <cctype>
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -13,7 +16,7 @@
 // H5 utilities
 // =============================================================================
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name) {
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name) {
     std::string value = "";
 
     try {
@@ -28,6 +31,15 @@ std::string readAttributeString(H5::H5File& file, const std::string& attr_name) 
 
     return value;
 }
+
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name) {
+    return loc.attrExists(attr_name);
+}
+
+bool groupExists(const H5::H5File& file, const std::string& path) {
+    return H5Lexists(file.getLocId(), path.c_str(), H5P_DEFAULT) > 0;
+}
+
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -57,10 +69,17 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 {
     SparseMatrixType type = SparseMatrixType::UNKNOWN;
 
-    if (typeStr == "CSR")
+    auto str_toupper = [](std::string str) -> std::string {
+        std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) { return std::toupper(c);});
+        return str;
+        };
+
+    const std::string typeStrUpperCase = str_toupper(typeStr);
+
+    if (typeStrUpperCase == "CSR" || typeStrUpperCase == "CSR_MATRIX")
         type = SparseMatrixType::CSR;
 
-    if (typeStr == "CSC")
+    if (typeStrUpperCase == "CSC" || typeStrUpperCase == "CSC_MATRIX")
         type = SparseMatrixType::CSC;
 
     return type;
@@ -69,48 +88,74 @@ SparseMatrixType sparseMatrixStringToType(const std::string& typeStr)
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 {
     if (!std::filesystem::exists(filename)) {
+        std::cerr << "readMatrixFromFile: file does not exist" << filename << std::endl;
         return false;
     }
 
+    // TODO: add some checks if the type on disk is actually int64
     try {
         data._filename = filename;
         data._file = std::make_unique<H5::H5File>(data._filename, H5F_ACC_RDONLY);
 
+        if (!groupExists(*(data._file.get()), "X")) {
+            std::cerr << "readMatrixFromFile: group X does not exist" << std::endl;
+            return false;
+        }
+
+        H5::Group Xgrp = data._file->openGroup("X");
+
         // Read shape
-        H5::DataSet shape_ds = data._file->openDataSet("/shape");
-        std::array<int, 2> shape{};
-        shape_ds.read(shape.data(), H5::PredType::NATIVE_INT);
+        H5::Attribute shape_attr = Xgrp.openAttribute("shape");
+        std::array<std::int64_t, 2> shape{};
+        shape_attr.read(H5::PredType::NATIVE_INT64, shape.data());
         data._num_rows = shape[0];
         data._num_cols = shape[1];
 
+        std::array<std::string, 3> datasets_names = { "data", "indices", "indptr" };
+        if (std::any_of(datasets_names.begin(), datasets_names.end(), [&Xgrp](const std::string& datasets_name) {
+            return !Xgrp.nameExists(datasets_name);
+            }))
+        {
+            std::cerr << "readMatrixFromFile: group X must have datasets data, indices, indptr" << std::endl;
+            return false;
+        }
+
         // Open datasets (but don't read data yet)
-        data._data_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/data"));
-        data._indices_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indices"));
-        data._indptr_ds = std::make_unique<H5::DataSet>(data._file->openDataSet("/indptr"));
+        data._data_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("data"));
+        data._indices_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("indices"));
+        data._indptr_ds = std::make_unique<H5::DataSet>(Xgrp.openDataSet("indptr"));
 
         // Read indptr array (small, need for row access)
         H5::DataSpace indptr_space = data._indptr_ds->getSpace();
         hsize_t indptr_size = {};
         indptr_space.getSimpleExtentDims(&indptr_size);
         data._indptr.resize(indptr_size);
-        data._indptr_ds->read(data._indptr.data(), H5::PredType::NATIVE_INT);
+        data._indptr_ds->read(data._indptr.data(), H5::PredType::NATIVE_INT64);
 
         // Read variable and observation names (if available)
-        auto readStringArray = [&data](const std::string& datasetName, std::vector<std::string>& dest) -> void {
+        auto readStringArray = [&data](const std::string& groupName, const std::string& datasetName, std::vector<std::string>& dest) -> void {
 
-            if (!data._file->nameExists(datasetName)) {
+            if (!groupExists(*(data._file.get()), groupName)) {
                 dest.clear();
                 return;
             }
 
-            H5::DataSet obs_ds = data._file->openDataSet(datasetName);
+            H5::Group grp = data._file->openGroup(groupName);
+
+            if (!grp.nameExists(datasetName)) {
+                dest.clear();
+                return;
+            }
+
+            H5::DataSet obs_ds = grp.openDataSet(datasetName);
             H5::DataSpace obs_space = obs_ds.getSpace();
             hsize_t n = {};
             obs_space.getSimpleExtentDims(&n);
 
             // Variable-length UTF-8 string type
             H5::StrType str_type(H5::PredType::C_S1, H5T_VARIABLE);
-            str_type.setCset(H5T_CSET_UTF8);
+            str_type.setCset(H5T_CSET_UTF8);        // UTF-8 character set
+            str_type.setStrpad(H5T_STR_NULLTERM);   // Null-terminated
 
             std::vector<char*> obs_raw(n);
             obs_ds.read(obs_raw.data(), str_type);
@@ -124,8 +169,8 @@ bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data)
 
             };
 
-        readStringArray("/obs_names", data._obs_names);
-        readStringArray("/var_names", data._var_names);
+        readStringArray("obs", "_index", data._obs_names);
+        readStringArray("var", "_index", data._var_names);
     }
     catch (H5::FileIException& e) {
         std::cerr << "HDF5 file error: " << e.getDetailMsg() << std::endl;
@@ -177,33 +222,151 @@ void SparseMatrixData::reset()
 
 SparseMatrixType SparseMatrixReader::readMatrixType(const std::string& filename) {
     H5::H5File file = H5::H5File(filename, H5F_ACC_RDONLY);
-    std::string format = readAttributeString(file, "format");
+
+    std::string format = "";
+
+    if (file.attrExists("format")) {
+        format = readAttributeString(file, "format");
+    }
+    else if (file.attrExists("encoding-type")) {
+        format = readAttributeString(file, "encoding-type");
+    }
+    else if (groupExists(file, "X")) {
+        H5::Group grp_X = file.openGroup("X");
+
+        if (grp_X.attrExists("encoding-type")) {
+            format = readAttributeString(grp_X, "encoding-type");
+        }
+    }
 
     return sparseMatrixStringToType(format);
 }
 
-void SparseMatrixReader::readFile(const std::string& filename)
+bool SparseMatrixReader::readFile(const std::string& filename)
 {
     if (_data._file || !_data._filename.empty()) {
         reset();
     }
 
-    readMatrixFromFile(filename, _data);
+    return readMatrixFromFile(filename, _data);
 }
 
-static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
+void SparseMatrixReader::reset(const bool keepType) {
+    _data.reset(); 
+    _lookupOrderRows.clear();
+    _cacheRows.clear();
+    _lookupOrderColumns.clear();
+    _cacheColumns.clear();
+    _maxCacheSize = 10;
+    _useCache = true;
+
+    if (!keepType) {
+        _type = SparseMatrixType::UNKNOWN;
+    }
+};
+
+void SparseMatrixReader::setMaxCacheSize(const size_t newSize) {
+    if (newSize == _maxCacheSize)
+        return;
+
+    _maxCacheSize = newSize;
+    removeLeastRecentlyUsed(_cacheRows, _lookupOrderRows);
+    removeLeastRecentlyUsed(_cacheColumns, _lookupOrderColumns);
+
+    assert(_cacheRows.size() <= _maxCacheSize);
+    assert(_cacheColumns.size() <= _maxCacheSize);
+}
+
+void SparseMatrixReader::removeLeastRecentlyUsed(Cache& cache, std::list<std::int64_t>& order) const {
+    assert(order.size() == cache.size());
+
+    if (cache.empty())
+        return;
+
+    const auto leastRecentID = order.back();
+    order.pop_back();
+    cache.erase(leastRecentID);
+
+    assert(order.size() == cache.size());
+}
+
+std::optional<std::vector<float>*> SparseMatrixReader::lookupCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id) const {
+    if (!_useCache)
+        return std::nullopt;
+
+    auto it = cache.find(id);
+    if (it != cache.cend()) {
+        // Move row_idx to front to mark as most recently used
+        order.erase(it->second.second);
+        order.push_front(id);
+        it->second.second = order.begin();
+        return &(it->second.first);
+    }
+
+    return std::nullopt;
+}
+
+void SparseMatrixReader::saveToCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id, const std::vector<float>& data) const {
+    if (!_useCache)
+        return;
+
+    if (cache.size() >= _maxCacheSize) {
+        removeLeastRecentlyUsed(cache, order);
+    }
+
+    // Insert new item
+    order.push_front(id);
+    cache[id] = { data, order.begin() };
+}
+
+std::vector<float> SparseMatrixReader::getRow(std::int64_t row_idx) {
+    // Check cache
+    const auto cacheResult = lookupCache(_cacheRows, _lookupOrderRows, row_idx);
+
+    if (cacheResult.has_value() && cacheResult.value() != nullptr) {
+        return *(cacheResult.value());
+    }
+
+    // Otherwise, fetch data
+    std::vector<float> data = getRowImpl(row_idx);
+
+    // Add to cache
+    saveToCache(_cacheRows, _lookupOrderRows, row_idx, data);
+
+    return data;
+}
+
+std::vector<float> SparseMatrixReader::getColumn(std::int64_t col_idx) {
+    // Check cache
+    const auto cacheResult = lookupCache(_cacheColumns, _lookupOrderColumns, col_idx);
+
+    if (cacheResult.has_value() && cacheResult.value() != nullptr) {
+        return *(cacheResult.value());
+    }
+
+    // Otherwise, fetch data
+    std::vector<float> data = getColumnImpl(col_idx);
+
+    // Add to cache
+    saveToCache(_cacheColumns, _lookupOrderColumns, col_idx, data);
+
+    return data;
+}
+
+static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const std::int64_t size_primary, const std::int64_t size_second, const std::int64_t idx) {
     std::vector<float> dense_array(size_second, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_primary) {
+        std::cerr << "getArrayPrimary: could not read from index" << std::endl;
         return dense_array;  // invalid data sets
     }
 
-    const int start = data._indptr[idx];
-    const int end = data._indptr[idx + 1];
-    const int arr_nnz = end - start;
+    const std::int64_t start = data._indptr[idx];
+    const std::int64_t end = data._indptr[idx + 1];
+    const std::int64_t arr_nnz = end - start;
 
     if (arr_nnz == 0) {
-        return dense_array;  // Empty arr
+        return dense_array;  // Empty array
     }
 
     try {
@@ -211,24 +374,25 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
         hsize_t offset = start;
         hsize_t count = arr_nnz;
 
-        // Read data slice
+        H5::DataSpace mem_space(1, &count);
+
+        // Read data
         H5::DataSpace data_space = data._data_ds->getSpace();
         data_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
-
-        H5::DataSpace mem_space(1, &count);
         std::vector<float> arr_data(arr_nnz);
         data._data_ds->read(arr_data.data(), H5::PredType::NATIVE_FLOAT, mem_space, data_space);
 
-        // Read indices slice
+        // Read indices
         H5::DataSpace indices_space = data._indices_ds->getSpace();
         indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
-
-        std::vector<int> arr_indices(arr_nnz);
-        data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+        std::vector<std::int64_t> arr_indices(arr_nnz);
+        data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT64, mem_space, indices_space);
 
         // Populate dense arr
 #pragma omp parallel for
         for (std::int64_t i = 0; i < static_cast<std::int64_t>(arr_nnz); ++i) {
+            assert(arr_indices[i] >= 0);
+            assert(arr_indices[i] < size_second);
             dense_array[arr_indices[i]] = arr_data[i];
         }
     }
@@ -239,19 +403,20 @@ static std::vector<float> getArrayPrimary(const SparseMatrixData& data, const in
     return dense_array;
 }
 
-static std::vector<float> getArraySecondary(const SparseMatrixData& data, const int size_primary, const int size_second, const int idx) {
+static std::vector<float> getArraySecondary(const SparseMatrixData& data, const std::int64_t size_primary, const std::int64_t size_second, const std::int64_t idx) {
     std::vector<float> dense_array(size_primary, 0.0f);
 
     if (!data._data_ds || !data._indices_ds || idx < 0 || idx >= size_second) {
-        return dense_array;  // invalid datasets or column index
+        std::cerr << "getArraySecondary: could not read from index" << std::endl;
+        return dense_array;  // invalid datasets or index
     }
 
     try {
         // We need to scan through all arrays to find entries in the requested column
-        for (int arr = 0; arr < size_primary; ++arr) {
-            const int start = data._indptr[arr];
-            const int end = data._indptr[arr + 1];
-            const int arr_nnz = end - start;
+        for (std::int64_t arr = 0; arr < size_primary; ++arr) {
+            const std::int64_t start = data._indptr[arr];
+            const std::int64_t end = data._indptr[arr + 1];
+            const std::int64_t arr_nnz = end - start;
 
             if (arr_nnz == 0) {
                 continue;  // Empty arr, skip
@@ -266,11 +431,11 @@ static std::vector<float> getArraySecondary(const SparseMatrixData& data, const 
             indices_space.selectHyperslab(H5S_SELECT_SET, &count, &offset);
 
             H5::DataSpace mem_space(1, &count);
-            std::vector<int> arr_indices(arr_nnz);
-            data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT, mem_space, indices_space);
+            std::vector<std::int64_t> arr_indices(arr_nnz);
+            data._indices_ds->read(arr_indices.data(), H5::PredType::NATIVE_INT64, mem_space, indices_space);
 
             // Check if this arr has an entry at the requested column
-            for (int i = 0; i < arr_nnz; ++i) {
+            for (std::int64_t i = 0; i < arr_nnz; ++i) {
                 if (arr_indices[i] == idx) {
                     // Found the column! Now read the corresponding data value
                     hsize_t data_offset = start + i;
@@ -313,12 +478,12 @@ CSRReader::CSRReader(const std::string& filename) :
 
 CSRReader::~CSRReader() = default;
 
-std::vector<float>CSRReader::getRow(int row_idx) const 
+std::vector<float>CSRReader::getRowImpl(std::int64_t row_idx) const
 {
     return getArrayPrimary(_data, _data._num_rows, _data._num_cols, row_idx);
 }
 
-std::vector<float> CSRReader::getColumn(int col_idx) const 
+std::vector<float> CSRReader::getColumnImpl(std::int64_t col_idx) const
 {
     return getArraySecondary(_data, _data._num_rows, _data._num_cols, col_idx);
 }
@@ -340,12 +505,12 @@ CSCReader::CSCReader(const std::string& filename) :
 
 CSCReader::~CSCReader() = default;
 
-std::vector<float> CSCReader::getColumn(int col_idx) const 
+std::vector<float> CSCReader::getColumnImpl(std::int64_t col_idx) const
 {
     return getArrayPrimary(_data, _data._num_cols, _data._num_rows, col_idx);
 }
 
-std::vector<float> CSCReader::getRow(int row_idx) const 
+std::vector<float> CSCReader::getRowImpl(std::int64_t row_idx) const
 {
     return getArraySecondary(_data, _data._num_cols, _data._num_rows, row_idx);
 }

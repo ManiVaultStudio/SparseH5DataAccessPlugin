@@ -2,7 +2,11 @@
 
 #include <cstdint>
 #include <memory>
+#include <list>
 #include <string>
+#include <unordered_map>
+#include <optional>
+#include <utility>
 #include <vector>
 
 // =============================================================================
@@ -12,9 +16,13 @@
 namespace H5 {
     class H5File;
     class DataSet;
+    class H5Object;
 }
 
-std::string readAttributeString(H5::H5File& file, const std::string& attr_name);
+std::string readAttributeString(H5::H5Object& file, const std::string& attr_name);
+
+bool groupExists(const H5::H5File& file, const std::string& path);
+bool attributeExists(const H5::H5Object& loc, const std::string& attr_name);
 
 // =============================================================================
 // Sparse matrix common utilities
@@ -44,15 +52,16 @@ struct SparseMatrixData {
     DataSet_p _indices_ds;
     DataSet_p _data_ds;
 
-    int _num_rows = 0;
-    int _num_cols = 0;
-    std::vector<int> _indptr = {};              // Column pointers (size = num_cols + 1)
+    std::int64_t _num_rows = 0;
+    std::int64_t _num_cols = 0;
+    std::vector<std::int64_t> _indptr = {};              // Column pointers (size = num_cols + 1)
 
     std::vector<std::string> _obs_names = {};
     std::vector<std::string> _var_names = {};
 };
 
 class SparseMatrixReader {
+    using Cache = std::unordered_map<std::int64_t, std::pair<std::vector<float>, std::list<std::int64_t>::iterator>>;
 
 public:
     SparseMatrixReader(SparseMatrixType type) : _type(type) {}
@@ -63,26 +72,52 @@ public: // Utility
 
 public: // Setup
 
-    void readFile(const std::string& filename);
-    void reset() { _data.reset(); };
+    void setUseCache(const bool useCache) { _useCache = useCache; }
+    void setMaxCacheSize(const size_t newSize);
+    bool readFile(const std::string& filename);
+    void reset(const bool keepType = true);
 
 public: // Getter
 
-    virtual std::vector<float> getRow(int row_idx) const = 0;
-    virtual std::vector<float> getColumn(int col_idx) const = 0;
+    std::vector<float> getRow(std::int64_t row_idx);
+    std::vector<float> getColumn(std::int64_t col_idx);
+
+    virtual std::vector<float> getRowImpl(std::int64_t row_idx) const = 0;
+    virtual std::vector<float> getColumnImpl(std::int64_t col_idx) const = 0;
+
+    bool hasObsNames() const { return !_data._obs_names.empty(); }
+    bool hasVarNames() const { return !_data._var_names.empty(); }
 
     const std::vector<std::string>& getObsNames() const { return _data._obs_names; }
     const std::vector<std::string>& getVarNames() const { return _data._var_names; }
 
-    int getNumRows() const { return _data._num_rows; }
-    int getNumCols() const { return _data._num_cols; }
+    std::int64_t getNumRows() const { return _data._num_rows; }
+    std::int64_t getNumCols() const { return _data._num_cols; }
 
     SparseMatrixType getType() const { return _type; }
     std::string getTypeString() const { return sparseMatrixTypeToString(_type); }
 
+    const SparseMatrixData& getRawData() const { return _data; }
+
+    bool getUseCache() const { return _useCache; }
+    size_t getMaxCacheSize() const { return _maxCacheSize; }
+
+private:
+    std::optional<std::vector<float>*> lookupCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id) const;
+    void saveToCache(Cache& cache, std::list<std::int64_t>& order, std::int64_t id, const std::vector<float>& data) const;
+    void removeLeastRecentlyUsed(Cache& cache, std::list<std::int64_t>& order) const;
+
 protected:
-    SparseMatrixData    _data = {};
-    SparseMatrixType    _type = SparseMatrixType::UNKNOWN;
+    SparseMatrixData        _data                        = {};
+    SparseMatrixType        _type                        = SparseMatrixType::UNKNOWN;
+
+    size_t                  _maxCacheSize                = 10;
+
+    bool                    _useCache                    = true;
+    std::list<std::int64_t> _lookupOrderRows             = {}; // Most recently used at front
+    Cache                   _cacheRows                   = {};
+    std::list<std::int64_t> _lookupOrderColumns          = {}; // Most recently used at front
+    Cache                   _cacheColumns                = {};
 };
 
 bool readMatrixFromFile(const std::string& filename, SparseMatrixData& data);
@@ -120,8 +155,8 @@ public:
 
 public: // Getter
 
-    std::vector<float> getRow(int row_idx) const override;
-    std::vector<float> getColumn(int col_idx) const override;
+    std::vector<float> getRowImpl(std::int64_t row_idx) const override;
+    std::vector<float> getColumnImpl(std::int64_t col_idx) const override;
 };
 
 // =============================================================================
@@ -160,6 +195,6 @@ public:
 
 public: // Getter
 
-    std::vector<float> getRow(int row_idx) const override;
-    std::vector<float> getColumn(int col_idx) const override;
+    std::vector<float> getRowImpl(std::int64_t row_idx) const override;
+    std::vector<float> getColumnImpl(std::int64_t col_idx) const override;
 };
