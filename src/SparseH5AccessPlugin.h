@@ -81,10 +81,10 @@ public:
     SparseH5AccessPluginFactory();
     ~SparseH5AccessPluginFactory() override {}
 
-    /** Creates an instance of the UMAP analysis plugin */
+    /** Creates an instance of the analysis plugin */
     AnalysisPlugin* produce() override;
 
-    /** Returns the data types that are supported by the UMAP analysis plugin */
+    /** Returns the data types that are supported by the analysis plugin */
     mv::DataTypes supportedDataTypes() const override;
 
     /** Enable right-click on data set to open analysis */

@@ -15,7 +15,7 @@ SettingsAction::SettingsAction(QObject* parent) :
     _dataDimsAction(this, "Data dimensions"),
     _saveDataToProjectAction(this, "Save data to project", false)
 {
-    setText("UMAP Settings");
+    setText("Sparse Matrix Access");
     setSerializationName("Sparse Matrix Access");
 
     _fileOnDiskAction.setToolTip("H5 file on disk");
