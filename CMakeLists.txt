@@ -17,7 +17,6 @@ if(WIN32)
     set(VCPKG_HOST_TRIPLET "x64-windows-static-md" CACHE STRING "")
     set(VCPKG_TARGET_TRIPLET "x64-windows-static-md" CACHE STRING "")
     set(VCPKG_LIBRARY_LINKAGE "static" CACHE STRING "")
-	set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /DEBUG")
 endif()
 
 # -----------------------------------------------------------------------------
