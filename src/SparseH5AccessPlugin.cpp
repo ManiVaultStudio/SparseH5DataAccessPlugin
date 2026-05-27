@@ -69,7 +69,7 @@ static std::vector<QString> toQStringVec(const QStringList& qstr_lst) {
 // Plugin
 // =============================================================================
 
-SparseH5AccessPlugin::SparseH5AccessPlugin(const PluginFactory* factory) :
+SparseH5AccessPlugin::SparseH5AccessPlugin(const mv::plugin::PluginFactory* factory) :
     AnalysisPlugin(factory),
     _settingsAction(this),
     _numPoints(),
@@ -354,10 +354,10 @@ bool SparseH5AccessPlugin::loadFileFromProject(const QVariantMap& variantMap)
 
 SparseH5AccessPluginFactory::SparseH5AccessPluginFactory()
 {
-    setIcon(util::StyledIcon(createPluginIcon("SAH5")));
+    setIcon(util::StyledIcon(gui::createPluginIcon("SAH5")));
 }
 
-AnalysisPlugin* SparseH5AccessPluginFactory::produce()
+mv::plugin::AnalysisPlugin* SparseH5AccessPluginFactory::produce()
 {
     return new SparseH5AccessPlugin(this);
 }
@@ -369,7 +369,7 @@ mv::DataTypes SparseH5AccessPluginFactory::supportedDataTypes() const
 
 mv::gui::PluginTriggerActions SparseH5AccessPluginFactory::getPluginTriggerActions(const mv::Datasets& datasets) const
 {
-    PluginTriggerActions pluginTriggerActions;
+    mv::gui::PluginTriggerActions pluginTriggerActions;
 
     const auto getPluginInstance = [this](const Dataset<Points>& dataset) -> SparseH5AccessPlugin* {
         return dynamic_cast<SparseH5AccessPlugin*>(plugins().requestPlugin(getKind(), { dataset }));
@@ -378,7 +378,7 @@ mv::gui::PluginTriggerActions SparseH5AccessPluginFactory::getPluginTriggerActio
     const auto numberOfDatasets = datasets.count();
 
     if (numberOfDatasets >= 1 && PluginFactory::areAllDatasetsOfTheSameType(datasets, PointType)) {
-        auto pluginTriggerAction = new PluginTriggerAction(const_cast<SparseH5AccessPluginFactory*>(this), this, "Sparse H5 Access", "Access sparse H5 data on disk", icon(), [this, getPluginInstance, datasets](PluginTriggerAction& pluginTriggerAction) -> void {
+        auto pluginTriggerAction = new mv::gui::PluginTriggerAction(const_cast<SparseH5AccessPluginFactory*>(this), this, "Sparse H5 Access", "Access sparse H5 data on disk", icon(), [this, getPluginInstance, datasets](gui::PluginTriggerAction& pluginTriggerAction) -> void {
             for (const auto& dataset : datasets)
                 getPluginInstance(dataset);
             });

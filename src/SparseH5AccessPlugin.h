@@ -30,7 +30,7 @@ class SparseH5AccessPlugin : public mv::plugin::AnalysisPlugin
 
 public:
 
-    SparseH5AccessPlugin(const PluginFactory* factory);
+    SparseH5AccessPlugin(const mv::plugin::PluginFactory* factory);
     ~SparseH5AccessPlugin() override;
 
     void init() override;
@@ -82,7 +82,7 @@ public:
     ~SparseH5AccessPluginFactory() override {}
 
     /** Creates an instance of the analysis plugin */
-    AnalysisPlugin* produce() override;
+    mv::plugin::AnalysisPlugin* produce() override;
 
     /** Returns the data types that are supported by the analysis plugin */
     mv::DataTypes supportedDataTypes() const override;
