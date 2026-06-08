@@ -108,6 +108,19 @@ jobs:
         shell: pwsh
         run: ${{ env.VCPKG_DIR }}/bootstrap-vcpkg.bat -disableMetrics
 
+      # Build the package
+      - name: Windows build
+        if: startsWith(matrix.os, 'windows')
+        uses: ManiVaultStudio/github-actions/conan_windows_build@main
+        with:
+          conan-visual-version: ${{matrix.build-cversion}}
+          conan-visual-runtime: ${{matrix.build-runtime}}
+          conan-build-type: ${{matrix.build-config}}
+          conan-user: ${{secrets.LKEB_UPLOAD_USER}}
+          conan-password: ${{secrets.LKEB_UPLOAD_USER_PASSWORD}}
+          conan-pem: ${{secrets.LKEB_UPLOAD_CERT_CHAIN}}
+          rs_ssh_key: ${{ secrets.RULESSUPPORT_DEPLOY_KEY }}
+          
       - name: Linux build
         if: startsWith(matrix.os, 'ubuntu')
         uses: ManiVaultStudio/github-actions/conan_linuxmac_build@main
