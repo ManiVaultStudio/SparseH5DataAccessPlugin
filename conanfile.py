@@ -107,7 +107,8 @@ class SparseH5DataAccessPluginConan(ConanFile):
         tc.variables["ManiVault_DIR"] = manivault_dir
 
         # Set some build options
-        tc.variables["MV_UNITY_BUILD"] = "ON"
+        tc.cache_variables["MV_UNITY_BUILD"] = "ON"
+        tc.cache_variables["CMAKE_CONFIGURATION_TYPES"] = "RelWithDebInfo"
         
         if os_info.is_macos:
             proc = subprocess.run("brew --prefix libomp", shell=True, capture_output=True)
@@ -153,7 +154,6 @@ class SparseH5DataAccessPluginConan(ConanFile):
 
         cmake = self._configure_cmake()
         cmake.build(build_type="RelWithDebInfo")
-        cmake.build(build_type="Release")
 
     def package(self):
         package_dir = pathlib.Path(self.build_folder, "package")
@@ -171,23 +171,9 @@ class SparseH5DataAccessPluginConan(ConanFile):
                 relWithDebInfo_dir,
             ]
         )
-        subprocess.run(
-            [
-                "cmake",
-                "--install",
-                self.build_folder,
-                "--config",
-                "Release",
-                "--prefix",
-                release_dir,
-            ]
-        )
         self.copy(pattern="*", src=package_dir)
 
     def package_info(self):
         self.cpp_info.relwithdebinfo.libdirs = ["RelWithDebInfo/lib"]
         self.cpp_info.relwithdebinfo.bindirs = ["RelWithDebInfo/Plugins", "RelWithDebInfo"]
         self.cpp_info.relwithdebinfo.includedirs = ["RelWithDebInfo/include", "RelWithDebInfo"]
-        self.cpp_info.release.libdirs = ["Release/lib"]
-        self.cpp_info.release.bindirs = ["Release/Plugins", "Release"]
-        self.cpp_info.release.includedirs = ["Release/include", "Release"]
